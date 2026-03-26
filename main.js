@@ -100,7 +100,10 @@ class Game {
                 y: 0,
                 items: { double: 1, heal: 1, shield: 1 },
                 hasShield: false,
-                activeItem: null       // 當前啟用的道具
+                activeItem: null,      // 當前啟用的道具
+                animation: null,       // 動畫狀態：'hurt', 'taunt', null
+                animationFrame: 0,     // 動畫幀數
+                animationDuration: 0   // 動畫持續時間
             },
             2: {
                 team: null,
@@ -109,7 +112,10 @@ class Game {
                 y: 0,
                 items: { double: 1, heal: 1, shield: 1 },
                 hasShield: false,
-                activeItem: null
+                activeItem: null,
+                animation: null,
+                animationFrame: 0,
+                animationDuration: 0
             }
         };
 
@@ -222,9 +228,19 @@ class Game {
             btn.addEventListener('click', (e) => this.answerQuestion(e.currentTarget.dataset.option));
         });
 
-        // 道具按鈕
+        // 道具按鈕 - 使用事件委派確保正確處理
         document.querySelectorAll('.item-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.useItem(e.currentTarget));
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.useItem(btn);
+            });
+            // 觸控支援
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.useItem(btn);
+            });
         });
 
         // 重新開始
@@ -609,7 +625,8 @@ class Game {
         this.state = GameState.HIT;
 
         const attacker = this.players[this.currentTurn];
-        const target = this.currentTurn === 1 ? this.players[2] : this.players[1];
+        const targetNum = this.currentTurn === 1 ? 2 : 1;
+        const target = this.players[targetNum];
 
         // 計算傷害（距離越近傷害越高）
         const accuracy = 1 - (distance / CONFIG.HIT_RADIUS);
@@ -633,6 +650,9 @@ class Game {
             document.getElementById('turn-indicator').textContent =
                 `💥 命中！造成 ${damage} 點傷害！`;
             this.addEffect(target.x, target.y, 'explosion');
+
+            // 觸發受傷動畫
+            this.triggerAnimation(targetNum, 'hurt');
         }
 
         // 延遲後檢查遊戲是否結束
@@ -651,9 +671,35 @@ class Game {
 
         document.getElementById('turn-indicator').textContent = '💨 沒有命中...';
 
+        // 觸發對手嘲諷動畫
+        const targetNum = this.currentTurn === 1 ? 2 : 1;
+        this.triggerAnimation(targetNum, 'taunt');
+
         setTimeout(() => {
             this.switchTurn();
-        }, 1000);
+        }, 1500);
+    }
+
+    // 觸發角色動畫
+    triggerAnimation(playerNum, animationType) {
+        const player = this.players[playerNum];
+        player.animation = animationType;
+        player.animationFrame = 0;
+        player.animationDuration = animationType === 'hurt' ? 60 : 90; // 幀數
+    }
+
+    // 更新角色動畫
+    updateAnimations() {
+        for (let p = 1; p <= 2; p++) {
+            const player = this.players[p];
+            if (player.animation) {
+                player.animationFrame++;
+                if (player.animationFrame >= player.animationDuration) {
+                    player.animation = null;
+                    player.animationFrame = 0;
+                }
+            }
+        }
     }
 
     // ==================== 道具系統 ====================
@@ -759,7 +805,10 @@ class Game {
                 y: this.players[1].y,
                 items: { double: 1, heal: 1, shield: 1 },
                 hasShield: false,
-                activeItem: null
+                activeItem: null,
+                animation: null,
+                animationFrame: 0,
+                animationDuration: 0
             },
             2: {
                 team: null,
@@ -768,7 +817,10 @@ class Game {
                 y: this.players[2].y,
                 items: { double: 1, heal: 1, shield: 1 },
                 hasShield: false,
-                activeItem: null
+                activeItem: null,
+                animation: null,
+                animationFrame: 0,
+                animationDuration: 0
             }
         };
 
@@ -898,33 +950,84 @@ class Game {
         const img = this.images[imgKey];
         const size = CONFIG.CHARACTER_SIZE;
 
+        // 計算動畫偏移和效果
+        let offsetX = 0;
+        let offsetY = 0;
+        let scale = 1;
+        let rotation = 0;
+        let tint = null;
+
+        if (player.animation === 'hurt') {
+            // 受傷動畫：抖動 + 紅色閃爍
+            const progress = player.animationFrame / player.animationDuration;
+            const shake = Math.sin(player.animationFrame * 0.8) * 15 * (1 - progress);
+            offsetX = shake;
+            offsetY = Math.abs(shake) * 0.3;
+            tint = `rgba(255, 0, 0, ${0.5 * (1 - progress)})`;
+        } else if (player.animation === 'taunt') {
+            // 嘲諷動畫：跳躍 + 旋轉
+            const progress = player.animationFrame / player.animationDuration;
+            const bounce = Math.sin(progress * Math.PI * 3) * 20;
+            offsetY = -Math.abs(bounce);
+            rotation = Math.sin(progress * Math.PI * 4) * 0.15;
+            scale = 1 + Math.sin(progress * Math.PI * 2) * 0.1;
+        }
+
         // 翻轉玩家2的角色（面向左邊）
         ctx.save();
 
+        // 應用動畫變換
+        const drawX = player.x + offsetX;
+        const drawY = player.y + offsetY;
+
         // 檢查圖片是否成功載入
         if (img && img.complete && img.naturalWidth > 0) {
-            if (playerNum === 2) {
-                ctx.translate(player.x, player.y);
-                ctx.scale(-1, 1);
-                ctx.drawImage(img, -size / 2, -size / 2, size, size);
-            } else {
-                ctx.drawImage(img, player.x - size / 2, player.y - size / 2, size, size);
+            ctx.translate(drawX, drawY);
+            ctx.rotate(rotation);
+            ctx.scale(playerNum === 2 ? -scale : scale, scale);
+            ctx.drawImage(img, -size / 2, -size / 2, size, size);
+
+            // 受傷紅色覆蓋
+            if (tint) {
+                ctx.fillStyle = tint;
+                ctx.fillRect(-size / 2, -size / 2, size, size);
             }
         } else {
             // 備用方案：繪製 emoji
-            const emoji = player.team === 'cat' ? '🐱' : '🐶';
+            let emoji = player.team === 'cat' ? '🐱' : '🐶';
+
+            // 動畫時改變表情
+            if (player.animation === 'hurt') {
+                emoji = player.team === 'cat' ? '🙀' : '😵';
+            } else if (player.animation === 'taunt') {
+                emoji = player.team === 'cat' ? '😸' : '😜';
+            }
+
+            ctx.translate(drawX, drawY);
+            ctx.rotate(rotation);
+            ctx.scale(playerNum === 2 ? -scale : scale, scale);
             ctx.font = `${size * 0.8}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            if (playerNum === 2) {
-                ctx.translate(player.x, player.y);
-                ctx.scale(-1, 1);
-                ctx.fillText(emoji, 0, 0);
-            } else {
-                ctx.fillText(emoji, player.x, player.y);
-            }
+            ctx.fillText(emoji, 0, 0);
         }
         ctx.restore();
+
+        // 嘲諷時顯示文字泡泡
+        if (player.animation === 'taunt') {
+            this.drawTauntBubble(player, playerNum);
+        }
+
+        // 受傷時顯示傷害數字效果
+        if (player.animation === 'hurt' && player.animationFrame < 30) {
+            ctx.fillStyle = '#ff4444';
+            ctx.font = 'bold 24px Microsoft JhengHei';
+            ctx.textAlign = 'center';
+            const floatY = player.y - size / 2 - 30 - player.animationFrame;
+            ctx.globalAlpha = 1 - (player.animationFrame / 30);
+            ctx.fillText('💢', player.x, floatY);
+            ctx.globalAlpha = 1;
+        }
 
         // 在攻擊階段高亮當前玩家
         if (this.state === GameState.ATTACK && playerNum === this.currentTurn) {
@@ -936,6 +1039,50 @@ class Game {
             ctx.stroke();
             ctx.setLineDash([]);
         }
+    }
+
+    // 繪製嘲諷文字泡泡
+    drawTauntBubble(player, playerNum) {
+        const ctx = this.ctx;
+        const progress = player.animationFrame / player.animationDuration;
+
+        // 隨機嘲諷文字
+        const taunts = ['哈哈！', '太遜了！', '打不到～', '再試試！', '遜斃了！'];
+        const tauntIndex = Math.floor(player.animationFrame / 20) % taunts.length;
+        const taunt = taunts[tauntIndex];
+
+        // 泡泡位置
+        const bubbleX = player.x + (playerNum === 1 ? 70 : -70);
+        const bubbleY = player.y - CONFIG.CHARACTER_SIZE / 2 - 40;
+
+        // 繪製泡泡
+        ctx.globalAlpha = Math.min(1, (1 - progress) * 2);
+
+        // 泡泡背景
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.ellipse(bubbleX, bubbleY, 50, 25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 泡泡尾巴
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(bubbleX + (playerNum === 1 ? -30 : 30), bubbleY + 15);
+        ctx.lineTo(player.x + (playerNum === 1 ? 30 : -30), player.y - CONFIG.CHARACTER_SIZE / 2 + 10);
+        ctx.lineTo(bubbleX + (playerNum === 1 ? -20 : 20), bubbleY + 20);
+        ctx.fill();
+
+        // 文字
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 14px Microsoft JhengHei';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(taunt, bubbleX, bubbleY);
+
+        ctx.globalAlpha = 1;
     }
 
     drawShieldAura(player) {
@@ -1186,6 +1333,7 @@ class Game {
             this.updateProjectile();
         }
         this.updateEffects();
+        this.updateAnimations();
 
         // 渲染畫面（只在遊戲畫面時）
         if (this.state !== GameState.INIT && this.state !== GameState.TEAM_SELECT) {
