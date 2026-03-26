@@ -90,6 +90,7 @@ class Game {
         this.questions = [];           // 題庫
         this.currentQuestionIndex = 0; // 當前題目索引
         this.currentTurn = 1;          // 當前回合玩家 (1 或 2)
+        this.questionOrderMode = 'sequential'; // 題目順序模式：'sequential' 或 'random'
 
         // 玩家資料
         this.players = {
@@ -370,10 +371,19 @@ class Game {
                     return;
                 }
 
-                // 打亂題目順序
-                this.shuffleQuestions();
+                // 根據用戶選擇決定題目順序
+                const orderSelection = document.querySelector('input[name="question-order"]:checked');
+                const isRandom = orderSelection && orderSelection.value === 'random';
 
-                fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題)`;
+                if (isRandom) {
+                    this.shuffleQuestions();
+                    this.questionOrderMode = 'random';
+                    fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題，🎲 隨機順序)`;
+                } else {
+                    this.questionOrderMode = 'sequential';
+                    fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題，📋 依檔案順序)`;
+                }
+
                 startBtn.disabled = false;
 
             } catch (err) {
@@ -450,9 +460,11 @@ class Game {
         // 重要：狀態變更後更新道具按鈕
         this.updateItemsUI();
 
-        // 如果題目用完，重新打亂
+        // 如果題目用完，根據選擇的順序模式處理
         if (this.currentQuestionIndex >= this.questions.length) {
-            this.shuffleQuestions();
+            if (this.questionOrderMode === 'random') {
+                this.shuffleQuestions();
+            }
             this.currentQuestionIndex = 0;
         }
 

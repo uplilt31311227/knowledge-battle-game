@@ -75,6 +75,58 @@ html, body {
     margin-bottom: 20px;
 }
 
+/* 題目順序選擇 */
+.order-selection {
+    margin: 25px 0;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+}
+
+.order-label {
+    color: #fff;
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+}
+
+.order-options {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.order-option {
+    cursor: pointer;
+}
+
+.order-option input[type="radio"] {
+    display: none;
+}
+
+.order-btn {
+    display: inline-block;
+    padding: 12px 25px;
+    font-size: 1.1rem;
+    background: rgba(100, 100, 150, 0.4);
+    color: #ccc;
+    border: 2px solid #555;
+    border-radius: 30px;
+    transition: all 0.3s;
+}
+
+.order-option input[type="radio"]:checked + .order-btn {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    color: #fff;
+    border-color: #4ade80;
+    box-shadow: 0 5px 20px rgba(74, 222, 128, 0.3);
+}
+
+.order-btn:hover {
+    border-color: #888;
+    transform: scale(1.05);
+}
+
 .upload-btn {
     display: inline-block;
     padding: 15px 40px;

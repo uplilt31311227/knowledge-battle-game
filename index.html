@@ -17,6 +17,22 @@
             <div class="upload-section">
                 <p>請上傳 Excel 題庫檔案 (.xlsx)</p>
                 <p class="hint">格式：題目、選項A、選項B、選項C、選項D、正確解答</p>
+
+                <!-- 題目順序選擇 -->
+                <div class="order-selection">
+                    <p class="order-label">題目順序：</p>
+                    <div class="order-options">
+                        <label class="order-option">
+                            <input type="radio" name="question-order" value="sequential" checked>
+                            <span class="order-btn">📋 依檔案順序</span>
+                        </label>
+                        <label class="order-option">
+                            <input type="radio" name="question-order" value="random">
+                            <span class="order-btn">🎲 隨機順序</span>
+                        </label>
+                    </div>
+                </div>
+
                 <label for="excel-upload" class="upload-btn">
                     📁 選擇檔案
                 </label>
