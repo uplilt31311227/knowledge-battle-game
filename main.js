@@ -38,8 +38,9 @@ const CONFIG = {
 
     // 物理參數
     GRAVITY: 0.4,              // 重力加速度（降低讓拋物線更遠）
-    MAX_POWER: 15.75,          // 最大發射力道（再降低50%）
-    POWER_MULTIPLIER: 0.0875,  // 拖拽距離轉力道係數（再降低50%）
+    MAX_POWER: 31.5,           // 最大發射力道
+    POWER_MULTIPLIER: 0.175,   // 拖拽距離轉力道係數
+    PROJECTILE_SPEED: 0.5,     // 飛行物動畫速度係數（降低50%）
 
     // 傷害計算
     // 傷害設定（三區域判定）
@@ -604,12 +605,12 @@ class Game {
     updateProjectile() {
         if (!this.projectile.active) return;
 
-        // 套用重力
-        this.projectile.vy += CONFIG.GRAVITY;
+        // 套用重力（乘以速度係數）
+        this.projectile.vy += CONFIG.GRAVITY * CONFIG.PROJECTILE_SPEED;
 
-        // 更新位置
-        this.projectile.x += this.projectile.vx;
-        this.projectile.y += this.projectile.vy;
+        // 更新位置（乘以速度係數，降低飛行動畫速度）
+        this.projectile.x += this.projectile.vx * CONFIG.PROJECTILE_SPEED;
+        this.projectile.y += this.projectile.vy * CONFIG.PROJECTILE_SPEED;
 
         // 檢查是否撞到圍牆
         if (this.checkWallCollision()) {
