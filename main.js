@@ -42,9 +42,11 @@ const CONFIG = {
     POWER_MULTIPLIER: 0.175,   // 拖拽距離轉力道係數（降低30%）
 
     // 傷害計算
-    BASE_DAMAGE: 15,           // 基礎傷害
-    MAX_DAMAGE: 30,            // 最大傷害（命中中心）
-    HIT_RADIUS: 80,            // 命中判定半徑
+    // 傷害設定（三區域判定）
+    DAMAGE_CENTER: 30,         // 中間擊中傷害
+    DAMAGE_INNER: 15,          // 中間兩側傷害
+    DAMAGE_OUTER: 10,          // 外面兩側傷害
+    HIT_RADIUS: 100,           // 命中判定半徑（配合放大後的角色）
 
     // 道具效果
     ITEMS: {
@@ -63,7 +65,7 @@ const CONFIG = {
 
     // 動畫
     PROJECTILE_SIZE: 40,       // 投擲物大小
-    CHARACTER_SIZE: 144,       // 角色大小（放大20%）
+    CHARACTER_SIZE: 187,       // 角色大小（再放大30%）
     TRAJECTORY_DOTS: 25        // 軌跡預測點數（增加以顯示更長軌跡）
 };
 
@@ -675,10 +677,22 @@ class Game {
         const targetNum = this.currentTurn === 1 ? 2 : 1;
         const target = this.players[targetNum];
 
-        // 計算傷害（距離越近傷害越高）
-        const accuracy = 1 - (distance / CONFIG.HIT_RADIUS);
-        let damage = CONFIG.BASE_DAMAGE + (CONFIG.MAX_DAMAGE - CONFIG.BASE_DAMAGE) * accuracy;
-        damage = Math.round(damage);
+        // 計算傷害（三區域判定：中間30、中間兩側15、外面兩側10）
+        const innerZone = CONFIG.HIT_RADIUS / 3;      // 中間區域
+        const middleZone = CONFIG.HIT_RADIUS * 2 / 3; // 中間兩側區域
+
+        let damage;
+        let hitZone;
+        if (distance < innerZone) {
+            damage = CONFIG.DAMAGE_CENTER;  // 中間擊中
+            hitZone = '中心';
+        } else if (distance < middleZone) {
+            damage = CONFIG.DAMAGE_INNER;   // 中間兩側
+            hitZone = '內側';
+        } else {
+            damage = CONFIG.DAMAGE_OUTER;   // 外面兩側
+            hitZone = '外側';
+        }
 
         // 檢查攻擊者是否有加倍傷害
         if (attacker.activeItem === 'double') {
@@ -695,7 +709,7 @@ class Game {
         } else {
             target.hp = Math.max(0, target.hp - damage);
             document.getElementById('turn-indicator').textContent =
-                `💥 命中！造成 ${damage} 點傷害！`;
+                `💥 命中${hitZone}！造成 ${damage} 點傷害！`;
             this.addEffect(target.x, target.y, 'explosion');
 
             // 觸發受傷動畫
