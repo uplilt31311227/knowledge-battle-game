@@ -652,6 +652,9 @@ class Game {
 
         document.getElementById('turn-indicator').textContent = '💥 撞到圍牆了！';
 
+        // 攻擊結束後隨機移動攻擊者位置
+        this.randomizeAttackerPosition();
+
         setTimeout(() => {
             this.switchTurn();
         }, 1200);
@@ -692,6 +695,9 @@ class Game {
             this.triggerAnimation(targetNum, 'hurt');
         }
 
+        // 攻擊結束後隨機移動攻擊者位置
+        this.randomizeAttackerPosition();
+
         // 延遲後檢查遊戲是否結束
         setTimeout(() => {
             if (target.hp <= 0) {
@@ -712,9 +718,33 @@ class Game {
         const targetNum = this.currentTurn === 1 ? 2 : 1;
         this.triggerAnimation(targetNum, 'taunt');
 
+        // 攻擊結束後隨機移動攻擊者位置
+        this.randomizeAttackerPosition();
+
         setTimeout(() => {
             this.switchTurn();
         }, 1500);
+    }
+
+    // 隨機移動攻擊者位置（在該隊範圍內）
+    randomizeAttackerPosition() {
+        const player = this.players[this.currentTurn];
+        const wall = this.getWallBounds();
+        const margin = CONFIG.CHARACTER_SIZE / 2 + 20; // 邊距
+
+        let minX, maxX;
+        if (this.currentTurn === 1) {
+            // 玩家1 在左側：從左邊緣到圍牆左邊
+            minX = margin;
+            maxX = wall.x - margin;
+        } else {
+            // 玩家2 在右側：從圍牆右邊到右邊緣
+            minX = wall.x + wall.width + margin;
+            maxX = this.canvas.width - margin;
+        }
+
+        // 隨機生成新的 x 座標
+        player.x = minX + Math.random() * (maxX - minX);
     }
 
     // 觸發角色動畫
