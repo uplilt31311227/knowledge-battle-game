@@ -91,6 +91,7 @@ class Game {
         this.currentQuestionIndex = 0; // 當前題目索引
         this.currentTurn = 1;          // 當前回合玩家 (1 或 2)
         this.questionOrderMode = 'sequential'; // 題目順序模式：'sequential' 或 'random'
+        this.currentOptionMapping = {}; // 當前題目的選項映射（隨機排列用）
 
         // 玩家資料
         this.players = {
@@ -475,10 +476,19 @@ class Game {
         document.getElementById('question-player').textContent = `玩家 ${this.currentTurn} (${teamName}) 答題`;
         document.getElementById('question-text').textContent = q.question;
 
+        // 隨機打亂選項順序
+        const optionKeys = ['A', 'B', 'C', 'D'];
+        const shuffledKeys = [...optionKeys].sort(() => Math.random() - 0.5);
+
+        // 建立選項映射：按鈕位置 -> 原始選項
+        this.currentOptionMapping = {};
         const optionBtns = document.querySelectorAll('.option-btn');
-        optionBtns.forEach(btn => {
-            const opt = btn.dataset.option;
-            btn.textContent = `${opt}. ${q.options[opt]}`;
+        optionBtns.forEach((btn, index) => {
+            const displayLabel = optionKeys[index]; // A, B, C, D (顯示用)
+            const originalKey = shuffledKeys[index]; // 隨機對應的原始選項
+            this.currentOptionMapping[displayLabel] = originalKey;
+            btn.dataset.option = displayLabel;
+            btn.textContent = `${displayLabel}. ${q.options[originalKey]}`;
             btn.className = 'option-btn'; // 重置樣式
             btn.disabled = false;
         });
@@ -494,13 +504,24 @@ class Game {
         if (this.state !== GameState.QUESTION) return;
 
         const q = this.questions[this.currentQuestionIndex];
-        const correct = q.answer === selected;
+        // 透過映射取得選擇對應的原始選項
+        const originalSelected = this.currentOptionMapping[selected];
+        const correct = q.answer === originalSelected;
         const feedbackEl = document.getElementById('answer-feedback');
+
+        // 找出正確答案對應的按鈕位置
+        let correctButtonLabel = null;
+        for (const [label, originalKey] of Object.entries(this.currentOptionMapping)) {
+            if (originalKey === q.answer) {
+                correctButtonLabel = label;
+                break;
+            }
+        }
 
         // 禁用所有選項
         document.querySelectorAll('.option-btn').forEach(btn => {
             btn.disabled = true;
-            if (btn.dataset.option === q.answer) {
+            if (btn.dataset.option === correctButtonLabel) {
                 btn.classList.add('correct');
             } else if (btn.dataset.option === selected && !correct) {
                 btn.classList.add('wrong');
@@ -522,7 +543,7 @@ class Game {
             }, 1500);
 
         } else {
-            feedbackEl.textContent = `❌ 答錯了！正確答案是 ${q.answer}`;
+            feedbackEl.textContent = `❌ 答錯了！正確答案是 ${correctButtonLabel}`;
             feedbackEl.className = 'answer-feedback wrong';
 
             // 延遲後換對手回合
