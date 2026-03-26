@@ -28,7 +28,9 @@ const ASSETS = {
     ground: '#4a7c4a',  // 地面顏色（配合背景草地）
     // 特效
     explosion: 'assets/effects/explosion.png',  // 爆炸效果
-    shield: 'assets/effects/shield.png'         // 護盾效果
+    shield: 'assets/effects/shield.png',        // 護盾效果
+    // 場景
+    wall: 'assets/wall.png'                     // 中間牆壁（美式風格）
 };
 
 // ==================== 遊戲設定常數 ====================
@@ -58,10 +60,10 @@ const CONFIG = {
 
     // 中間圍牆設定
     WALL: {
-        WIDTH: 40,             // 圍牆寬度
-        HEIGHT_RATIO: 0.45,    // 圍牆高度（相對於畫面高度的比例）
-        COLOR: '#8B4513',      // 圍牆顏色（棕色磚牆）
-        BORDER_COLOR: '#5D3A1A' // 圍牆邊框顏色
+        WIDTH: 80,             // 圍牆寬度（配合美式風格圖片）
+        HEIGHT_RATIO: 0.5,     // 圍牆高度（相對於畫面高度的比例）
+        COLOR: '#8B4513',      // 圍牆顏色（備用）
+        BORDER_COLOR: '#5D3A1A' // 圍牆邊框顏色（備用）
     },
 
     // 動畫
@@ -214,6 +216,7 @@ class Game {
         loadImage('dog_projectile', ASSETS.dog.projectile, '🦴');
         loadImage('shield', ASSETS.shield, '🛡️');
         loadImage('explosion', ASSETS.explosion, '💥');
+        loadImage('wall', ASSETS.wall, null);
 
         // 設定陣營選擇畫面的圖片
         const catImg = document.getElementById('cat-select-img');
@@ -1074,6 +1077,9 @@ class Game {
             offsetY = -Math.abs(bounce);
             rotation = Math.sin(progress * Math.PI * 4) * 0.15;
             scale = 1 + Math.sin(progress * Math.PI * 2) * 0.1;
+        } else if (imgState === 'attack') {
+            // 攻擊狀態：放大 20%
+            scale = 1.2;
         }
 
         // 翻轉玩家2的角色（面向左邊）
@@ -1341,47 +1347,19 @@ class Game {
     drawWall() {
         const ctx = this.ctx;
         const wall = this.getWallBounds();
+        const wallImg = this.images['wall'];
 
-        // 繪製磚牆效果
-        ctx.fillStyle = CONFIG.WALL.COLOR;
-        ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
-
-        // 繪製磚塊紋理
-        ctx.strokeStyle = CONFIG.WALL.BORDER_COLOR;
-        ctx.lineWidth = 2;
-
-        const brickHeight = 20;
-        const brickWidth = wall.width;
-
-        for (let row = 0; row < wall.height / brickHeight; row++) {
-            const y = wall.y + row * brickHeight;
-
-            // 水平線
-            ctx.beginPath();
-            ctx.moveTo(wall.x, y);
-            ctx.lineTo(wall.x + wall.width, y);
-            ctx.stroke();
-
-            // 垂直線（交錯排列）
-            if (row % 2 === 0) {
-                ctx.beginPath();
-                ctx.moveTo(wall.x + wall.width / 2, y);
-                ctx.lineTo(wall.x + wall.width / 2, y + brickHeight);
-                ctx.stroke();
-            }
+        // 使用圖片繪製牆壁
+        if (wallImg && wallImg.complete && wallImg.naturalWidth > 0) {
+            ctx.drawImage(wallImg, wall.x, wall.y, wall.width, wall.height);
+        } else {
+            // 備用：繪製簡單磚牆
+            ctx.fillStyle = CONFIG.WALL.COLOR;
+            ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+            ctx.strokeStyle = CONFIG.WALL.BORDER_COLOR;
+            ctx.lineWidth = 4;
+            ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
         }
-
-        // 圍牆邊框
-        ctx.strokeStyle = '#3D2314';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
-
-        // 圍牆頂部裝飾
-        ctx.fillStyle = '#654321';
-        ctx.fillRect(wall.x - 5, wall.y - 10, wall.width + 10, 15);
-        ctx.strokeStyle = '#3D2314';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(wall.x - 5, wall.y - 10, wall.width + 10, 15);
     }
 
     drawEffects() {
