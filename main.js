@@ -447,6 +447,9 @@ class Game {
     showQuestion() {
         this.state = GameState.QUESTION;
 
+        // 重要：狀態變更後更新道具按鈕
+        this.updateItemsUI();
+
         // 如果題目用完，重新打亂
         if (this.currentQuestionIndex >= this.questions.length) {
             this.shuffleQuestions();
@@ -500,6 +503,7 @@ class Game {
             setTimeout(() => {
                 document.getElementById('question-modal').classList.remove('active');
                 this.state = GameState.ATTACK;
+                this.updateItemsUI(); // 重要：更新道具按鈕狀態
                 document.getElementById('turn-indicator').textContent =
                     `🎮 玩家 ${this.currentTurn} 拖拽角色來攻擊！`;
                 this.currentQuestionIndex++;
