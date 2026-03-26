@@ -317,8 +317,11 @@ html, body {
 }
 
 .item-icon {
-    font-size: 1.8rem;
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
     pointer-events: none; /* 確保點擊事件傳遞到父按鈕 */
+    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));
 }
 
 .item-count {
@@ -518,6 +521,7 @@ html, body {
     }
 
     .item-icon {
-        font-size: 1.4rem;
+        width: 40px;
+        height: 40px;
     }
 }

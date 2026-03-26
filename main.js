@@ -55,7 +55,8 @@ const CONFIG = {
     ITEMS: {
         double: { name: '加倍傷害', multiplier: 2 },
         heal: { name: '恢復血量', amount: 30 },
-        shield: { name: '護盾', blocksOne: true }
+        shield: { name: '護盾', blocksOne: true },
+        bigWeapon: { name: '放大武器', sizeMultiplier: 2 }
     },
 
     // 中間圍牆設定
@@ -106,7 +107,7 @@ class Game {
                 hp: CONFIG.MAX_HP,
                 x: 0,
                 y: 0,
-                items: { double: 1, heal: 1, shield: 1 },
+                items: { double: 1, heal: 1, shield: 1, bigWeapon: 1 },
                 hasShield: false,
                 activeItem: null,      // 當前啟用的道具
                 animation: null,       // 動畫狀態：'hurt', 'taunt', null
@@ -120,7 +121,7 @@ class Game {
                 hp: CONFIG.MAX_HP,
                 x: 0,
                 y: 0,
-                items: { double: 1, heal: 1, shield: 1 },
+                items: { double: 1, heal: 1, shield: 1, bigWeapon: 1 },
                 hasShield: false,
                 activeItem: null,
                 animation: null,
@@ -138,7 +139,8 @@ class Game {
             y: 0,
             vx: 0,
             vy: 0,
-            owner: null
+            owner: null,
+            isBig: false  // 放大武器效果
         };
 
         // 拖拽狀態
@@ -430,30 +432,28 @@ class Game {
     startGame() {
         this.switchScreen('init-screen', 'team-select-screen');
         this.state = GameState.TEAM_SELECT;
-        document.querySelector('.player-indicator').textContent = '玩家 1 請選擇';
+        document.querySelector('.player-indicator').textContent = '玩家 1 選擇陣營';
     }
 
     selectTeam(team) {
-        if (this.players[1].team === null) {
-            // 玩家1 選擇
-            this.players[1].team = team;
-            document.querySelector('.player-indicator').textContent = '玩家 2 請選擇';
-        } else {
-            // 玩家2 選擇（不能選和玩家1一樣的）
-            if (team === this.players[1].team) {
-                // 自動選另一個陣營
-                this.players[2].team = (team === 'cat') ? 'dog' : 'cat';
-            } else {
-                this.players[2].team = team;
-            }
+        // 玩家1 選擇陣營，玩家2 自動獲得另一陣營
+        this.players[1].team = team;
+        this.players[2].team = (team === 'cat') ? 'dog' : 'cat';
 
-            // 進入遊戲
+        // 顯示選擇結果
+        const p1Team = team === 'cat' ? '🐱 貓咪隊' : '🐶 狗狗隊';
+        const p2Team = team === 'cat' ? '🐶 狗狗隊' : '🐱 貓咪隊';
+        document.querySelector('.player-indicator').textContent =
+            `玩家1: ${p1Team} vs 玩家2: ${p2Team}`;
+
+        // 短暫延遲後進入遊戲
+        setTimeout(() => {
             this.switchScreen('team-select-screen', 'game-screen');
             this.state = GameState.READY;
             this.currentTurn = 1;
             this.updateItemsUI();
             this.startTurn();
-        }
+        }, 1000);
     }
 
     startTurn() {
@@ -604,6 +604,12 @@ class Game {
         this.projectile.vx = Math.cos(angle) * power;
         this.projectile.vy = Math.sin(angle) * power;
         this.projectile.owner = this.currentTurn;
+
+        // 檢查是否有放大武器效果
+        this.projectile.isBig = (player.activeItem === 'bigWeapon');
+        if (this.projectile.isBig) {
+            player.activeItem = null;
+        }
 
         this.state = GameState.PROJECTILE;
         document.getElementById('turn-indicator').textContent = '🚀 發射！';
@@ -842,6 +848,12 @@ class Game {
                 playerData.hasShield = true;
                 document.getElementById('turn-indicator').textContent = '🛡️ 護盾已啟用！';
                 break;
+
+            case 'bigWeapon':
+                // 放大武器（標記，等攻擊時套用）
+                playerData.activeItem = 'bigWeapon';
+                document.getElementById('turn-indicator').textContent = '🔥 武器放大 200%！';
+                break;
         }
 
         this.updateItemsUI();
@@ -864,7 +876,8 @@ class Game {
                 // 顯示啟用狀態
                 btn.classList.toggle('active',
                     (item === 'double' && player.activeItem === 'double') ||
-                    (item === 'shield' && player.hasShield)
+                    (item === 'shield' && player.hasShield) ||
+                    (item === 'bigWeapon' && player.activeItem === 'bigWeapon')
                 );
             });
         }
@@ -905,7 +918,7 @@ class Game {
                 hp: CONFIG.MAX_HP,
                 x: this.players[1].x,
                 y: this.players[1].y,
-                items: { double: 1, heal: 1, shield: 1 },
+                items: { double: 1, heal: 1, shield: 1, bigWeapon: 1 },
                 hasShield: false,
                 activeItem: null,
                 animation: null,
@@ -917,7 +930,7 @@ class Game {
                 hp: CONFIG.MAX_HP,
                 x: this.players[2].x,
                 y: this.players[2].y,
-                items: { double: 1, heal: 1, shield: 1 },
+                items: { double: 1, heal: 1, shield: 1, bigWeapon: 1 },
                 hasShield: false,
                 activeItem: null,
                 animation: null,
@@ -941,7 +954,7 @@ class Game {
         // 回到陣營選擇
         this.switchScreen('game-screen', 'team-select-screen');
         this.state = GameState.TEAM_SELECT;
-        document.querySelector('.player-indicator').textContent = '玩家 1 請選擇';
+        document.querySelector('.player-indicator').textContent = '玩家 1 選擇陣營';
     }
 
     // ==================== 畫面渲染 ====================
@@ -1490,7 +1503,10 @@ class Game {
         const ctx = this.ctx;
         const team = this.players[this.projectile.owner].team;
         const img = this.images[`${team}_projectile`];
-        const size = CONFIG.PROJECTILE_SIZE;
+
+        // 根據放大武器效果調整大小
+        const sizeMultiplier = this.projectile.isBig ? CONFIG.ITEMS.bigWeapon.sizeMultiplier : 1;
+        const size = CONFIG.PROJECTILE_SIZE * sizeMultiplier;
 
         // 旋轉效果
         const rotation = Date.now() / 100;
@@ -1498,6 +1514,12 @@ class Game {
         ctx.save();
         ctx.translate(this.projectile.x, this.projectile.y);
         ctx.rotate(rotation);
+
+        // 放大時加發光效果
+        if (this.projectile.isBig) {
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 20;
+        }
 
         // 檢查圖片是否成功載入
         if (img && img.complete && img.naturalWidth > 0) {
