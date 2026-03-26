@@ -49,7 +49,7 @@ const CONFIG = {
     DAMAGE_CENTER: 30,         // 中間擊中傷害
     DAMAGE_INNER: 15,          // 中間兩側傷害
     DAMAGE_OUTER: 10,          // 外面兩側傷害
-    HIT_RADIUS: 100,           // 命中判定半徑（配合放大後的角色）
+    HIT_RADIUS: 130,           // 命中判定半徑（配合放大後的角色，增加30%）
 
     // 道具效果
     ITEMS: {
@@ -68,7 +68,7 @@ const CONFIG = {
 
     // 動畫
     PROJECTILE_SIZE: 80,       // 投擲物大小（放大200%）
-    CHARACTER_SIZE: 187,       // 角色大小（再放大30%）
+    CHARACTER_SIZE: 224,       // 角色大小（再放大20%，原187）
     TRAJECTORY_DOTS: 25        // 軌跡預測點數（增加以顯示更長軌跡）
 };
 
@@ -1011,9 +1011,16 @@ class Game {
 
         // 快打旋風風格血條設定
         const barWidth = w * 0.35;  // 血條寬度（畫面寬度的 35%）
-        const barHeight = 30;
-        const barY = 25;
+        const barHeight = 38;       // 加高血條
+        const barY = 28;
         const centerGap = 80;  // 中間間隔
+
+        // P1/P2 專屬配色
+        const playerColors = {
+            1: { primary: '#00BFFF', secondary: '#0080FF', border: '#00FFFF', glow: 'rgba(0, 191, 255, 0.6)' },
+            2: { primary: '#FF6347', secondary: '#FF4500', border: '#FFD700', glow: 'rgba(255, 99, 71, 0.6)' }
+        };
+        const colors = playerColors[playerNum];
 
         // P1 在左側（血量從右往左減少），P2 在右側（血量從左往右減少）
         const barX = playerNum === 1
@@ -1023,8 +1030,8 @@ class Game {
         // 震動效果
         let shakeX = 0, shakeY = 0;
         if (player.hpFlash > 0) {
-            shakeX = Math.sin(player.hpFlash * 2) * 3;
-            shakeY = Math.cos(player.hpFlash * 3) * 2;
+            shakeX = Math.sin(player.hpFlash * 2) * 4;
+            shakeY = Math.cos(player.hpFlash * 3) * 3;
             player.hpFlash--;
         }
 
@@ -1032,7 +1039,7 @@ class Game {
         ctx.translate(shakeX, shakeY);
 
         // 繪製血條外框（斜角造型）
-        const skew = 8;  // 斜角程度
+        const skew = 10;  // 斜角程度加大
         ctx.beginPath();
         if (playerNum === 1) {
             // P1: 右斜
@@ -1049,10 +1056,24 @@ class Game {
         }
         ctx.closePath();
 
-        // 背景（深色）
-        ctx.fillStyle = '#1a1a2e';
+        // 外發光效果
+        ctx.shadowColor = colors.glow;
+        ctx.shadowBlur = 15;
+
+        // 背景（深色漸層）
+        const bgGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+        bgGradient.addColorStop(0, '#2a2a4a');
+        bgGradient.addColorStop(0.5, '#1a1a2e');
+        bgGradient.addColorStop(1, '#0a0a1e');
+        ctx.fillStyle = bgGradient;
         ctx.fill();
-        ctx.strokeStyle = '#ffd700';
+
+        // 邊框（雙層效果）
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.strokeStyle = colors.border;
         ctx.lineWidth = 3;
         ctx.stroke();
 
@@ -1109,51 +1130,89 @@ class Game {
             }
             ctx.closePath();
 
-            // 血量漸層顏色
+            // 血量漸層顏色（更鮮豔）
             const gradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
             if (hpPercent > 0.5) {
-                gradient.addColorStop(0, '#90EE90');
-                gradient.addColorStop(0.5, '#32CD32');
+                // 高血量：亮綠色
+                gradient.addColorStop(0, '#7FFF00');
+                gradient.addColorStop(0.3, '#00FF00');
+                gradient.addColorStop(0.7, '#32CD32');
                 gradient.addColorStop(1, '#228B22');
             } else if (hpPercent > 0.25) {
-                gradient.addColorStop(0, '#FFD700');
-                gradient.addColorStop(0.5, '#FFA500');
+                // 中血量：橙黃色
+                gradient.addColorStop(0, '#FFFF00');
+                gradient.addColorStop(0.3, '#FFD700');
+                gradient.addColorStop(0.7, '#FFA500');
                 gradient.addColorStop(1, '#FF8C00');
             } else {
-                gradient.addColorStop(0, '#FF6B6B');
-                gradient.addColorStop(0.5, '#FF0000');
-                gradient.addColorStop(1, '#8B0000');
+                // 低血量：亮紅色
+                gradient.addColorStop(0, '#FF4444');
+                gradient.addColorStop(0.3, '#FF0000');
+                gradient.addColorStop(0.7, '#DD0000');
+                gradient.addColorStop(1, '#AA0000');
             }
             ctx.fillStyle = gradient;
             ctx.fill();
 
+            // 高光效果（血條上方亮線）
+            ctx.beginPath();
+            if (playerNum === 1) {
+                const startX = barX + barWidth - hpWidth;
+                ctx.moveTo(startX + skew * (1 - hpPercent) + 2, barY + 3);
+                ctx.lineTo(barX + barWidth - 2, barY + 3);
+            } else {
+                const endX = barX + hpWidth;
+                ctx.moveTo(barX + 2, barY + 3);
+                ctx.lineTo(endX - skew * (1 - hpPercent) - 2, barY + 3);
+            }
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
             // 閃光效果
             if (player.hpFlash > 0 && player.hpFlash % 4 < 2) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
                 ctx.fill();
             }
             ctx.restore();
         }
 
-        // 玩家名稱和血量數字
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 18px Arial';
-        ctx.textAlign = playerNum === 1 ? 'left' : 'right';
-        const textX = playerNum === 1 ? barX : barX + barWidth;
-        ctx.fillText(`P${playerNum}`, textX, barY - 5);
+        // 繪製文字描邊輔助函數
+        const drawTextWithStroke = (text, x, y, fontSize, fillColor, strokeColor, strokeWidth) => {
+            ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.lineWidth = strokeWidth;
+            ctx.strokeStyle = strokeColor;
+            ctx.strokeText(text, x, y);
+            ctx.fillStyle = fillColor;
+            ctx.fillText(text, x, y);
+        };
 
-        // 血量數字
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#ffd700';
-        ctx.fillText(`${player.hp}`, barX + barWidth / 2, barY + barHeight / 2 + 5);
+        // 玩家名稱標籤（大字體 + 描邊）
+        const labelX = playerNum === 1 ? barX + 35 : barX + barWidth - 35;
+        const labelY = barY - 12;
+        drawTextWithStroke(`P${playerNum}`, labelX, labelY, 22, colors.primary, '#000', 4);
+
+        // 血量數字（置中顯示，大字體 + 描邊）
+        const hpText = `${player.hp}/${CONFIG.MAX_HP}`;
+        drawTextWithStroke(hpText, barX + barWidth / 2, barY + barHeight / 2, 18, '#FFFFFF', '#000', 4);
 
         // 陣營圖示
         if (player.team) {
             const iconImg = this.images[`${player.team}_idle`];
-            const iconSize = 40;
-            const iconX = playerNum === 1 ? barX - iconSize - 10 : barX + barWidth + 10;
-            const iconY = barY - 5;
+            const iconSize = 50;  // 加大圖示
+            const iconX = playerNum === 1 ? barX - iconSize - 15 : barX + barWidth + 15;
+            const iconY = barY - 8;
+
+            // 圖示外框光暈
+            ctx.shadowColor = colors.glow;
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath();
+            ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2 + 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
 
             if (iconImg && iconImg.complete && iconImg.naturalWidth > 0) {
                 ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize);
@@ -1470,23 +1529,82 @@ class Game {
         };
     }
 
-    // 繪製中間圍牆
+    // 繪製中間圍牆（簡單 2D 美式風格）
     drawWall() {
         const ctx = this.ctx;
         const wall = this.getWallBounds();
-        const wallImg = this.images['wall'];
 
-        // 使用圖片繪製牆壁
-        if (wallImg && wallImg.complete && wallImg.naturalWidth > 0) {
-            ctx.drawImage(wallImg, wall.x, wall.y, wall.width, wall.height);
-        } else {
-            // 備用：繪製簡單磚牆
-            ctx.fillStyle = CONFIG.WALL.COLOR;
-            ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
-            ctx.strokeStyle = CONFIG.WALL.BORDER_COLOR;
-            ctx.lineWidth = 4;
-            ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
+        ctx.save();
+
+        // 牆壁主體漸層（磚紅色）
+        const wallGradient = ctx.createLinearGradient(wall.x, 0, wall.x + wall.width, 0);
+        wallGradient.addColorStop(0, '#8B4513');
+        wallGradient.addColorStop(0.3, '#CD853F');
+        wallGradient.addColorStop(0.5, '#D2691E');
+        wallGradient.addColorStop(0.7, '#CD853F');
+        wallGradient.addColorStop(1, '#8B4513');
+
+        // 繪製主體
+        ctx.fillStyle = wallGradient;
+        ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+
+        // 磚塊紋理
+        ctx.strokeStyle = '#5D3A1A';
+        ctx.lineWidth = 2;
+        const brickHeight = 25;
+        const brickWidth = wall.width / 2;
+
+        for (let row = 0; row < Math.ceil(wall.height / brickHeight); row++) {
+            const y = wall.y + row * brickHeight;
+            // 水平線
+            ctx.beginPath();
+            ctx.moveTo(wall.x, y);
+            ctx.lineTo(wall.x + wall.width, y);
+            ctx.stroke();
+
+            // 垂直線（交錯排列）
+            const offset = (row % 2 === 0) ? 0 : brickWidth / 2;
+            for (let col = 0; col <= 2; col++) {
+                const x = wall.x + offset + col * brickWidth;
+                if (x > wall.x && x < wall.x + wall.width) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x, Math.min(y + brickHeight, wall.y + wall.height));
+                    ctx.stroke();
+                }
+            }
         }
+
+        // 粗黑色邊框（美式漫畫風格）
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(wall.x, wall.y, wall.width, wall.height);
+
+        // 內側亮邊（立體感）
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(wall.x + 3, wall.y + wall.height - 3);
+        ctx.lineTo(wall.x + 3, wall.y + 3);
+        ctx.lineTo(wall.x + wall.width - 3, wall.y + 3);
+        ctx.stroke();
+
+        // 內側暗邊
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.moveTo(wall.x + wall.width - 3, wall.y + 3);
+        ctx.lineTo(wall.x + wall.width - 3, wall.y + wall.height - 3);
+        ctx.lineTo(wall.x + 3, wall.y + wall.height - 3);
+        ctx.stroke();
+
+        // 頂部裝飾（簡單的磚帽）
+        ctx.fillStyle = '#6B3E26';
+        ctx.fillRect(wall.x - 5, wall.y - 8, wall.width + 10, 10);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(wall.x - 5, wall.y - 8, wall.width + 10, 10);
+
+        ctx.restore();
     }
 
     drawEffects() {
