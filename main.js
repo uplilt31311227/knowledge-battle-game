@@ -111,7 +111,9 @@ class Game {
                 activeItem: null,      // 當前啟用的道具
                 animation: null,       // 動畫狀態：'hurt', 'taunt', null
                 animationFrame: 0,     // 動畫幀數
-                animationDuration: 0   // 動畫持續時間
+                animationDuration: 0,  // 動畫持續時間
+                hpFlash: 0,            // 血條閃光效果計時
+                lastHp: CONFIG.MAX_HP  // 上一次血量（用於扣血動畫）
             },
             2: {
                 team: null,
@@ -123,7 +125,9 @@ class Game {
                 activeItem: null,
                 animation: null,
                 animationFrame: 0,
-                animationDuration: 0
+                animationDuration: 0,
+                hpFlash: 0,            // 血條閃光效果計時
+                lastHp: CONFIG.MAX_HP  // 上一次血量（用於扣血動畫）
             }
         };
 
@@ -717,6 +721,7 @@ class Game {
             this.addEffect(target.x, target.y, 'shield');
         } else {
             target.hp = Math.max(0, target.hp - damage);
+            target.hpFlash = 30;  // 觸發血條閃光震動效果
             document.getElementById('turn-indicator').textContent =
                 `💥 命中${hitZone}！造成 ${damage} 點傷害！`;
             this.addEffect(target.x, target.y, 'explosion');
@@ -1002,38 +1007,160 @@ class Game {
     drawHealthBar(playerNum) {
         const ctx = this.ctx;
         const player = this.players[playerNum];
-        const barWidth = 200;
-        const barHeight = 25;
-        const x = playerNum === 1 ? 100 : this.canvas.width - 300;
-        const y = 30;
+        const w = this.canvas.width;
 
-        // 背景
-        ctx.fillStyle = '#333';
-        ctx.fillRect(x, y, barWidth, barHeight);
+        // 快打旋風風格血條設定
+        const barWidth = w * 0.35;  // 血條寬度（畫面寬度的 35%）
+        const barHeight = 30;
+        const barY = 25;
+        const centerGap = 80;  // 中間間隔
 
-        // 血量
-        const hpPercent = player.hp / CONFIG.MAX_HP;
-        const hpColor = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
-        ctx.fillStyle = hpColor;
-        ctx.fillRect(x, y, barWidth * hpPercent, barHeight);
+        // P1 在左側（血量從右往左減少），P2 在右側（血量從左往右減少）
+        const barX = playerNum === 1
+            ? (w / 2) - centerGap - barWidth
+            : (w / 2) + centerGap;
 
-        // 邊框
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, barWidth, barHeight);
-
-        // 文字
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px Microsoft JhengHei';
-        ctx.textAlign = 'center';
-        ctx.fillText(`P${playerNum}: ${player.hp}/${CONFIG.MAX_HP}`, x + barWidth / 2, y + 18);
-
-        // 陣營標示
-        if (player.team) {
-            const teamEmoji = player.team === 'cat' ? '🐱' : '🐶';
-            ctx.font = '24px sans-serif';
-            ctx.fillText(teamEmoji, x - 30, y + 22);
+        // 震動效果
+        let shakeX = 0, shakeY = 0;
+        if (player.hpFlash > 0) {
+            shakeX = Math.sin(player.hpFlash * 2) * 3;
+            shakeY = Math.cos(player.hpFlash * 3) * 2;
+            player.hpFlash--;
         }
+
+        ctx.save();
+        ctx.translate(shakeX, shakeY);
+
+        // 繪製血條外框（斜角造型）
+        const skew = 8;  // 斜角程度
+        ctx.beginPath();
+        if (playerNum === 1) {
+            // P1: 右斜
+            ctx.moveTo(barX + skew, barY);
+            ctx.lineTo(barX + barWidth, barY);
+            ctx.lineTo(barX + barWidth - skew, barY + barHeight);
+            ctx.lineTo(barX, barY + barHeight);
+        } else {
+            // P2: 左斜
+            ctx.moveTo(barX, barY);
+            ctx.lineTo(barX + barWidth - skew, barY);
+            ctx.lineTo(barX + barWidth, barY + barHeight);
+            ctx.lineTo(barX + skew, barY + barHeight);
+        }
+        ctx.closePath();
+
+        // 背景（深色）
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fill();
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // 血量計算
+        const hpPercent = player.hp / CONFIG.MAX_HP;
+        const lastHpPercent = player.lastHp / CONFIG.MAX_HP;
+        const hpWidth = barWidth * hpPercent;
+        const lastHpWidth = barWidth * lastHpPercent;
+
+        // 緩慢減少的血量背景（紅色殘影）
+        if (lastHpPercent > hpPercent) {
+            ctx.save();
+            ctx.beginPath();
+            if (playerNum === 1) {
+                const startX = barX + barWidth - lastHpWidth;
+                ctx.moveTo(startX + skew * (1 - lastHpPercent), barY);
+                ctx.lineTo(barX + barWidth, barY);
+                ctx.lineTo(barX + barWidth - skew, barY + barHeight);
+                ctx.lineTo(startX, barY + barHeight);
+            } else {
+                const endX = barX + lastHpWidth;
+                ctx.moveTo(barX, barY);
+                ctx.lineTo(endX - skew * (1 - lastHpPercent), barY);
+                ctx.lineTo(endX, barY + barHeight);
+                ctx.lineTo(barX + skew, barY + barHeight);
+            }
+            ctx.closePath();
+            ctx.fillStyle = '#8b0000';
+            ctx.fill();
+            ctx.restore();
+
+            // 緩慢更新 lastHp
+            player.lastHp = Math.max(player.hp, player.lastHp - 0.5);
+        }
+
+        // 當前血量（漸層）
+        if (hpPercent > 0) {
+            ctx.save();
+            ctx.beginPath();
+            if (playerNum === 1) {
+                // P1: 血量從右往左減少
+                const startX = barX + barWidth - hpWidth;
+                ctx.moveTo(startX + skew * (1 - hpPercent), barY);
+                ctx.lineTo(barX + barWidth, barY);
+                ctx.lineTo(barX + barWidth - skew, barY + barHeight);
+                ctx.lineTo(startX, barY + barHeight);
+            } else {
+                // P2: 血量從左往右減少
+                const endX = barX + hpWidth;
+                ctx.moveTo(barX, barY);
+                ctx.lineTo(endX - skew * (1 - hpPercent), barY);
+                ctx.lineTo(endX, barY + barHeight);
+                ctx.lineTo(barX + skew, barY + barHeight);
+            }
+            ctx.closePath();
+
+            // 血量漸層顏色
+            const gradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+            if (hpPercent > 0.5) {
+                gradient.addColorStop(0, '#90EE90');
+                gradient.addColorStop(0.5, '#32CD32');
+                gradient.addColorStop(1, '#228B22');
+            } else if (hpPercent > 0.25) {
+                gradient.addColorStop(0, '#FFD700');
+                gradient.addColorStop(0.5, '#FFA500');
+                gradient.addColorStop(1, '#FF8C00');
+            } else {
+                gradient.addColorStop(0, '#FF6B6B');
+                gradient.addColorStop(0.5, '#FF0000');
+                gradient.addColorStop(1, '#8B0000');
+            }
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // 閃光效果
+            if (player.hpFlash > 0 && player.hpFlash % 4 < 2) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // 玩家名稱和血量數字
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = playerNum === 1 ? 'left' : 'right';
+        const textX = playerNum === 1 ? barX : barX + barWidth;
+        ctx.fillText(`P${playerNum}`, textX, barY - 5);
+
+        // 血量數字
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(`${player.hp}`, barX + barWidth / 2, barY + barHeight / 2 + 5);
+
+        // 陣營圖示
+        if (player.team) {
+            const iconImg = this.images[`${player.team}_idle`];
+            const iconSize = 40;
+            const iconX = playerNum === 1 ? barX - iconSize - 10 : barX + barWidth + 10;
+            const iconY = barY - 5;
+
+            if (iconImg && iconImg.complete && iconImg.naturalWidth > 0) {
+                ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize);
+            }
+        }
+
+        ctx.restore();
     }
 
     drawCharacter(playerNum) {
