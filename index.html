@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>知識大亂鬥 - 貓狗大戰</title>
+    <!-- SheetJS 用於讀取 Excel 檔案 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 初始畫面：上傳題庫 -->
+    <div id="init-screen" class="screen active">
+        <div class="init-container">
+            <h1>🎮 知識大亂鬥</h1>
+            <h2>貓狗大戰</h2>
+            <div class="upload-section">
+                <p>請上傳 Excel 題庫檔案 (.xlsx)</p>
+                <p class="hint">格式：題目、選項A、選項B、選項C、選項D、正確解答</p>
+                <label for="excel-upload" class="upload-btn">
+                    📁 選擇檔案
+                </label>
+                <input type="file" id="excel-upload" accept=".xlsx,.xls" hidden>
+                <p id="file-name" class="file-name"></p>
+                <p id="upload-error" class="error-msg"></p>
+            </div>
+            <button id="start-btn" class="main-btn" disabled>開始遊戲</button>
+        </div>
+    </div>
+
+    <!-- 陣營選擇畫面 -->
+    <div id="team-select-screen" class="screen">
+        <div class="team-container">
+            <h2>選擇你的陣營</h2>
+            <p class="player-indicator">玩家 1 請選擇</p>
+            <div class="team-options">
+                <button class="team-btn" data-team="cat">
+                    <img id="cat-select-img" src="" alt="貓咪陣營">
+                    <span>貓咪隊</span>
+                </button>
+                <button class="team-btn" data-team="dog">
+                    <img id="dog-select-img" src="" alt="狗狗陣營">
+                    <span>狗狗隊</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲主畫面 -->
+    <div id="game-screen" class="screen">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- 玩家1 道具欄 (左側) -->
+        <div id="p1-items" class="item-bar left">
+            <button class="item-btn" data-item="double" data-player="1" title="加倍傷害">
+                <span class="item-icon">⚔️</span>
+                <span class="item-count">1</span>
+            </button>
+            <button class="item-btn" data-item="heal" data-player="1" title="恢復血量">
+                <span class="item-icon">💚</span>
+                <span class="item-count">1</span>
+            </button>
+            <button class="item-btn" data-item="shield" data-player="1" title="護盾">
+                <span class="item-icon">🛡️</span>
+                <span class="item-count">1</span>
+            </button>
+        </div>
+
+        <!-- 玩家2 道具欄 (右側) -->
+        <div id="p2-items" class="item-bar right">
+            <button class="item-btn" data-item="double" data-player="2" title="加倍傷害">
+                <span class="item-icon">⚔️</span>
+                <span class="item-count">1</span>
+            </button>
+            <button class="item-btn" data-item="heal" data-player="2" title="恢復血量">
+                <span class="item-icon">💚</span>
+                <span class="item-count">1</span>
+            </button>
+            <button class="item-btn" data-item="shield" data-player="2" title="護盾">
+                <span class="item-icon">🛡️</span>
+                <span class="item-count">1</span>
+            </button>
+        </div>
+
+        <!-- 回合提示 -->
+        <div id="turn-indicator" class="turn-indicator"></div>
+    </div>
+
+    <!-- 題目視窗 (疊加層) -->
+    <div id="question-modal" class="modal">
+        <div class="modal-content question-content">
+            <h3 id="question-player">玩家 1 答題</h3>
+            <p id="question-text" class="question-text"></p>
+            <div id="options-container" class="options-container">
+                <button class="option-btn" data-option="A"></button>
+                <button class="option-btn" data-option="B"></button>
+                <button class="option-btn" data-option="C"></button>
+                <button class="option-btn" data-option="D"></button>
+            </div>
+            <p id="answer-feedback" class="answer-feedback"></p>
+        </div>
+    </div>
+
+    <!-- 遊戲結束視窗 -->
+    <div id="gameover-modal" class="modal">
+        <div class="modal-content gameover-content">
+            <h2 id="winner-text">🏆 勝利者</h2>
+            <p id="winner-team"></p>
+            <button id="restart-btn" class="main-btn">再玩一局</button>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

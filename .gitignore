@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+
+# uv 專案檔案（非遊戲必要）
+pyproject.toml
+uv.lock
+main.py
+.python-version
+
+# 題庫檔案（用戶自行上傳）
+*.csv
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+nul
+
+# IDE
+.vscode/
+.idea/
