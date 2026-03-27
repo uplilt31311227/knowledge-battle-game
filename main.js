@@ -13,7 +13,8 @@ const ASSETS = {
         attack: 'assets/cat/attack.png',       // 貓咪攻擊
         hurt: 'assets/cat/hurt.png',           // 貓咪受傷
         taunt: 'assets/cat/taunt.png',         // 貓咪嘲諷
-        projectile: 'assets/cat/projectile.png' // 貓咪投擲物（魚）
+        projectile: 'assets/cat/projectile.png', // 貓咪投擲物（魚）
+        portrait: 'assets/portraits/cat_portrait.png'  // 貓咪頭像（快打旋風風格）
     },
     // 狗狗陣營圖片（美式漫畫風格）
     dog: {
@@ -21,7 +22,8 @@ const ASSETS = {
         attack: 'assets/dog/attack.png',       // 狗狗攻擊
         hurt: 'assets/dog/hurt.png',           // 狗狗受傷
         taunt: 'assets/dog/taunt.png',         // 狗狗嘲諷
-        projectile: 'assets/dog/projectile.png' // 狗狗投擲物（骨頭）
+        projectile: 'assets/dog/projectile.png', // 狗狗投擲物（骨頭）
+        portrait: 'assets/portraits/dog_portrait.png'  // 狗狗頭像（快打旋風風格）
     },
     // 背景與場景（美式漫畫風格）
     background: 'assets/background.png',  // 遊戲背景
@@ -220,6 +222,8 @@ class Game {
         loadImage('dog_hurt', ASSETS.dog.hurt, '🐶');
         loadImage('dog_taunt', ASSETS.dog.taunt, '🐕');
         loadImage('dog_projectile', ASSETS.dog.projectile, '🦴');
+        loadImage('cat_portrait', ASSETS.cat.portrait, '🐱');
+        loadImage('dog_portrait', ASSETS.dog.portrait, '🐶');
         loadImage('shield', ASSETS.shield, '🛡️');
         loadImage('explosion', ASSETS.explosion, '💥');
         loadImage('wall', ASSETS.wall, null);
@@ -1211,25 +1215,54 @@ class Game {
         const hpText = `${player.hp}/${CONFIG.MAX_HP}`;
         drawTextWithStroke(hpText, barX + barWidth / 2, barY + barHeight / 2, 18, '#FFFFFF', '#000', 4);
 
-        // 陣營圖示
+        // 快打旋風風格角色頭像
         if (player.team) {
-            const iconImg = this.images[`${player.team}_idle`];
-            const iconSize = 50;  // 加大圖示
-            const iconX = playerNum === 1 ? barX - iconSize - 15 : barX + barWidth + 15;
-            const iconY = barY - 8;
+            const portraitImg = this.images[`${player.team}_portrait`];
+            const portraitSize = 70;  // 頭像大小
+            const portraitX = playerNum === 1 ? barX - portraitSize - 20 : barX + barWidth + 20;
+            const portraitY = barY - 15;
 
-            // 圖示外框光暈
+            // 頭像外框（快打旋風風格）
+            ctx.save();
+
+            // 外層發光
             ctx.shadowColor = colors.glow;
-            ctx.shadowBlur = 10;
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.beginPath();
-            ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2 + 3, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.shadowBlur = 15;
+
+            // 黑色底框
+            ctx.fillStyle = '#000';
+            ctx.fillRect(portraitX - 4, portraitY - 4, portraitSize + 8, portraitSize + 8);
+
+            // 玩家專屬色邊框
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(portraitX - 4, portraitY - 4, portraitSize + 8, portraitSize + 8);
+
             ctx.shadowBlur = 0;
 
-            if (iconImg && iconImg.complete && iconImg.naturalWidth > 0) {
-                ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize);
+            // 繪製頭像
+            if (portraitImg && portraitImg.complete && portraitImg.naturalWidth > 0) {
+                ctx.drawImage(portraitImg, portraitX, portraitY, portraitSize, portraitSize);
+            } else {
+                // 備用 emoji
+                ctx.font = `${portraitSize * 0.7}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(player.team === 'cat' ? '🐱' : '🐶',
+                    portraitX + portraitSize/2, portraitY + portraitSize/2);
             }
+
+            // 內側高光邊
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(portraitX, portraitY + portraitSize);
+            ctx.lineTo(portraitX, portraitY);
+            ctx.lineTo(portraitX + portraitSize, portraitY);
+            ctx.stroke();
+
+            ctx.restore();
         }
 
         ctx.restore();
