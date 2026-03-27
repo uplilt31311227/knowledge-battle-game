@@ -102,6 +102,7 @@ class Game {
         this.currentQuestionIndex = 0; // 當前題目索引
         this.currentTurn = 1;          // 當前回合玩家 (1 或 2)
         this.questionOrderMode = 'sequential'; // 題目順序模式：'sequential' 或 'random'
+        this.gameMode = 'normal';              // 遊戲模式：'normal' 一般模式 或 'duel' 決鬥模式
         this.currentOptionMapping = {}; // 當前題目的選項映射（隨機排列用）
 
         // 玩家資料
@@ -245,6 +246,19 @@ class Game {
     setupEventListeners() {
         // Excel 上傳
         document.getElementById('excel-upload').addEventListener('change', (e) => this.handleExcelUpload(e));
+
+        // 遊戲模式切換時顯示說明
+        document.querySelectorAll('input[name="game-mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const hint = document.getElementById('mode-hint');
+                if (e.target.value === 'duel') {
+                    hint.textContent = '⚠️ 一擊必殺！被命中即淘汰';
+                    hint.style.color = '#ff6b6b';
+                } else {
+                    hint.textContent = '';
+                }
+            });
+        });
 
         // 開始遊戲按鈕
         document.getElementById('start-btn').addEventListener('click', () => this.startGame());
@@ -408,11 +422,18 @@ class Game {
                 if (isRandom) {
                     this.shuffleQuestions();
                     this.questionOrderMode = 'random';
-                    fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題，🎲 隨機順序)`;
                 } else {
                     this.questionOrderMode = 'sequential';
-                    fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題，📋 依檔案順序)`;
                 }
+
+                // 根據用戶選擇決定遊戲模式
+                const modeSelection = document.querySelector('input[name="game-mode"]:checked');
+                this.gameMode = modeSelection ? modeSelection.value : 'normal';
+
+                // 顯示檔案資訊
+                const orderText = isRandom ? '🎲 隨機順序' : '📋 依檔案順序';
+                const modeText = this.gameMode === 'duel' ? '💀 決鬥模式' : '⚔️ 一般模式';
+                fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題，${orderText}，${modeText})`;
 
                 startBtn.disabled = false;
 
@@ -731,6 +752,11 @@ class Game {
         // 立即重置道具狀態（結束超級賽亞人型態）
         attacker.activeItem = null;
 
+        // 決鬥模式：一擊必殺
+        if (this.gameMode === 'duel') {
+            damage = CONFIG.MAX_HP;
+        }
+
         // 檢查目標是否有護盾
         if (target.hasShield) {
             damage = 0;
@@ -740,8 +766,15 @@ class Game {
         } else {
             target.hp = Math.max(0, target.hp - damage);
             target.hpFlash = 30;  // 觸發血條閃光震動效果
-            document.getElementById('turn-indicator').textContent =
-                `💥 命中${hitZone}！造成 ${damage} 點傷害！`;
+
+            // 根據模式顯示不同訊息
+            if (this.gameMode === 'duel') {
+                document.getElementById('turn-indicator').textContent =
+                    `💀 一擊必殺！命中${hitZone}！`;
+            } else {
+                document.getElementById('turn-indicator').textContent =
+                    `💥 命中${hitZone}！造成 ${damage} 點傷害！`;
+            }
             this.addEffect(target.x, target.y, 'explosion');
 
             // 觸發受傷動畫

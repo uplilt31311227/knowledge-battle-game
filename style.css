@@ -89,6 +89,12 @@ html, body {
     margin-bottom: 12px;
 }
 
+.mode-hint {
+    font-size: 0.9rem;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
 .order-options {
     display: flex;
     gap: 15px;
