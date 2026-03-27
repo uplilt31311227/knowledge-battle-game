@@ -1941,7 +1941,7 @@ class Game {
         ctx.restore();
     }
 
-    // 一般模式場景特效（陽光、花瓣、彩虹光暈）
+    // 一般模式場景特效（微風蕭瑟感）
     drawNormalModeEffects(groundY) {
         const ctx = this.ctx;
         const w = this.canvas.width;
@@ -1950,141 +1950,109 @@ class Game {
 
         ctx.save();
 
-        // 陽光光束效果（從右上角射出）
-        const sunX = w * 0.85;
-        const sunY = h * 0.1;
+        // 淡淡的霧氣效果（營造蕭瑟氛圍）
+        const mistGradient = ctx.createLinearGradient(0, 0, 0, h);
+        mistGradient.addColorStop(0, 'rgba(200, 210, 220, 0)');
+        mistGradient.addColorStop(0.4, 'rgba(180, 195, 210, 0.03)');
+        mistGradient.addColorStop(0.7, 'rgba(170, 185, 200, 0.06)');
+        mistGradient.addColorStop(1, 'rgba(160, 175, 190, 0.1)');
+        ctx.fillStyle = mistGradient;
+        ctx.fillRect(0, 0, w, h);
 
-        // 太陽光暈
-        const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 150);
-        sunGlow.addColorStop(0, 'rgba(255, 255, 200, 0.4)');
-        sunGlow.addColorStop(0.3, 'rgba(255, 255, 150, 0.2)');
-        sunGlow.addColorStop(0.7, 'rgba(255, 230, 100, 0.1)');
-        sunGlow.addColorStop(1, 'rgba(255, 220, 80, 0)');
-        ctx.fillStyle = sunGlow;
-        ctx.beginPath();
-        ctx.arc(sunX, sunY, 150 + Math.sin(time * 0.5) * 20, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 動態陽光光束
-        for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI * 0.3) + (i * 0.15) + Math.sin(time * 0.3 + i) * 0.05;
-            const rayLength = 400 + Math.sin(time * 0.5 + i * 0.7) * 50;
-            const rayWidth = 30 + Math.sin(time * 0.8 + i) * 10;
-            const rayAlpha = 0.08 + Math.sin(time * 0.6 + i * 0.5) * 0.03;
-
-            ctx.beginPath();
-            ctx.moveTo(sunX, sunY);
-            ctx.lineTo(
-                sunX - Math.cos(angle) * rayLength - rayWidth,
-                sunY + Math.sin(angle) * rayLength
-            );
-            ctx.lineTo(
-                sunX - Math.cos(angle) * rayLength + rayWidth,
-                sunY + Math.sin(angle) * rayLength
-            );
-            ctx.closePath();
-
-            const rayGradient = ctx.createLinearGradient(sunX, sunY, sunX - Math.cos(angle) * rayLength, sunY + Math.sin(angle) * rayLength);
-            rayGradient.addColorStop(0, `rgba(255, 255, 200, ${rayAlpha * 2})`);
-            rayGradient.addColorStop(0.5, `rgba(255, 255, 150, ${rayAlpha})`);
-            rayGradient.addColorStop(1, 'rgba(255, 255, 100, 0)');
-            ctx.fillStyle = rayGradient;
-            ctx.fill();
-        }
-
-        // 漂浮的花瓣/葉片粒子
-        for (let i = 0; i < 15; i++) {
-            const petalX = (Math.sin(time * 0.2 + i * 1.3) * 0.5 + 0.5) * w;
-            const petalBaseY = (Math.sin(time * 0.15 + i * 0.9) * 0.3 + 0.4) * h;
-            const petalY = petalBaseY + Math.sin(time * 0.4 + i * 0.6) * 30;
-            const petalSize = 6 + Math.sin(time * 0.3 + i) * 2;
-            const petalRotation = time * 0.5 + i * 0.8;
-            const petalAlpha = 0.4 + Math.sin(time * 0.5 + i * 0.7) * 0.2;
+        // 飄落的落葉（秋風蕭瑟感）
+        for (let i = 0; i < 12; i++) {
+            // 落葉從左往右飄動，緩慢下落
+            const leafTime = time * 0.3 + i * 50;
+            const leafX = ((leafTime * 0.8 + i * 120) % (w + 100)) - 50;
+            const leafBaseY = ((leafTime * 0.4 + i * 80) % (h + 50)) - 25;
+            const leafY = leafBaseY + Math.sin(time * 0.5 + i * 0.8) * 15;
+            const leafSize = 8 + (i % 4) * 2;
+            const leafRotation = time * 0.8 + i * 1.2 + Math.sin(time * 0.6 + i) * 0.5;
+            const leafAlpha = 0.5 + Math.sin(time * 0.4 + i * 0.6) * 0.15;
 
             ctx.save();
-            ctx.translate(petalX, petalY);
-            ctx.rotate(petalRotation);
-            ctx.globalAlpha = petalAlpha;
+            ctx.translate(leafX, leafY);
+            ctx.rotate(leafRotation);
+            ctx.globalAlpha = leafAlpha;
 
-            // 花瓣形狀
+            // 落葉形狀（楓葉形）
             ctx.beginPath();
-            ctx.ellipse(0, 0, petalSize * 1.5, petalSize * 0.6, 0, 0, Math.PI * 2);
+            ctx.moveTo(0, -leafSize);
+            ctx.quadraticCurveTo(leafSize * 0.8, -leafSize * 0.3, leafSize * 0.5, leafSize * 0.5);
+            ctx.quadraticCurveTo(0, leafSize * 0.3, -leafSize * 0.5, leafSize * 0.5);
+            ctx.quadraticCurveTo(-leafSize * 0.8, -leafSize * 0.3, 0, -leafSize);
+            ctx.closePath();
 
-            // 粉色或白色花瓣
-            const hue = (i % 3 === 0) ? 'rgba(255, 200, 220, 0.8)' :
-                        (i % 3 === 1) ? 'rgba(255, 255, 255, 0.8)' : 'rgba(200, 255, 220, 0.8)';
-            ctx.fillStyle = hue;
+            // 秋天色調：褐色、橙色、黃色
+            const leafColors = [
+                'rgba(180, 100, 60, 0.85)',   // 褐色
+                'rgba(210, 130, 50, 0.85)',   // 橙色
+                'rgba(190, 160, 70, 0.85)',   // 黃褐色
+                'rgba(160, 90, 50, 0.85)'     // 深褐色
+            ];
+            ctx.fillStyle = leafColors[i % 4];
             ctx.fill();
+
+            // 葉脈
+            ctx.strokeStyle = 'rgba(100, 60, 30, 0.4)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(0, -leafSize * 0.8);
+            ctx.lineTo(0, leafSize * 0.3);
+            ctx.stroke();
 
             ctx.restore();
         }
 
-        // 地面草地微風效果
-        for (let i = 0; i < 30; i++) {
-            const grassX = (w / 30) * i + (w / 60);
-            const grassHeight = 15 + Math.sin(i * 0.5) * 5;
-            const sway = Math.sin(time * 1.5 + i * 0.3) * 5;
+        // 微風線條（風的流動感）
+        for (let i = 0; i < 8; i++) {
+            const windY = h * 0.2 + (h * 0.5 / 8) * i + Math.sin(time * 0.3 + i) * 20;
+            const windStartX = (Math.sin(time * 0.2 + i * 1.5) * 0.3 - 0.1) * w;
+            const windLength = 80 + Math.sin(time * 0.5 + i * 0.7) * 30;
+            const windAlpha = 0.08 + Math.sin(time * 0.4 + i * 0.6) * 0.04;
 
             ctx.beginPath();
-            ctx.moveTo(grassX, groundY);
-            ctx.quadraticCurveTo(
-                grassX + sway,
-                groundY - grassHeight * 0.5,
-                grassX + sway * 1.5,
-                groundY - grassHeight
-            );
-            ctx.strokeStyle = `rgba(100, 180, 100, ${0.3 + Math.sin(time + i) * 0.1})`;
-            ctx.lineWidth = 2;
+            ctx.moveTo(windStartX, windY);
+
+            // 波浪形的風線
+            for (let j = 0; j < 4; j++) {
+                const segX = windStartX + (windLength / 4) * (j + 1);
+                const segY = windY + Math.sin(time * 2 + i + j * 0.8) * 3;
+                ctx.lineTo(segX, segY);
+            }
+
+            ctx.strokeStyle = `rgba(150, 170, 190, ${windAlpha})`;
+            ctx.lineWidth = 1.5;
             ctx.lineCap = 'round';
             ctx.stroke();
         }
 
-        // 溫暖的底部光暈
-        const warmGlow = ctx.createLinearGradient(0, groundY - 40, 0, groundY + 10);
-        warmGlow.addColorStop(0, 'rgba(255, 230, 150, 0)');
-        warmGlow.addColorStop(0.5, 'rgba(255, 220, 130, 0.08)');
-        warmGlow.addColorStop(1, 'rgba(255, 200, 100, 0.15)');
-        ctx.fillStyle = warmGlow;
-        ctx.fillRect(0, groundY - 40, w, 50);
-
-        // 閃爍的星星光點（代表歡樂氣氛）
-        for (let i = 0; i < 8; i++) {
-            const sparkleX = (Math.sin(time * 0.1 + i * 2.5) * 0.4 + 0.5) * w;
-            const sparkleY = (Math.sin(time * 0.08 + i * 1.8) * 0.3 + 0.25) * h;
-            const sparkleSize = 3 + Math.sin(time * 2 + i * 1.2) * 2;
-            const sparkleAlpha = 0.3 + Math.sin(time * 3 + i) * 0.3;
-
-            // 四角星形
-            ctx.save();
-            ctx.translate(sparkleX, sparkleY);
-            ctx.globalAlpha = sparkleAlpha;
+        // 漂浮的灰塵粒子
+        for (let i = 0; i < 20; i++) {
+            const dustTime = time * 0.15 + i * 30;
+            const dustX = ((dustTime * 1.2 + i * 80) % (w + 60)) - 30;
+            const dustY = (Math.sin(time * 0.2 + i * 1.1) * 0.3 + 0.5) * h + Math.sin(time * 0.6 + i * 0.5) * 20;
+            const dustSize = 1.5 + Math.sin(time * 0.5 + i) * 0.5;
+            const dustAlpha = 0.2 + Math.sin(time * 0.7 + i * 0.8) * 0.1;
 
             ctx.beginPath();
-            for (let j = 0; j < 4; j++) {
-                const angle = (j * Math.PI / 2) + time * 0.5;
-                ctx.moveTo(0, 0);
-                ctx.lineTo(
-                    Math.cos(angle) * sparkleSize * 2,
-                    Math.sin(angle) * sparkleSize * 2
-                );
-            }
-            ctx.strokeStyle = 'rgba(255, 255, 200, 0.8)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // 中心光點
-            ctx.beginPath();
-            ctx.arc(0, 0, sparkleSize * 0.5, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.arc(dustX, dustY, dustSize, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(180, 175, 170, ${dustAlpha})`;
             ctx.fill();
-
-            ctx.restore();
         }
 
-        // 彩虹光暈邊框（柔和版本）
-        const rainbowAlpha = 0.15 + Math.sin(time * 0.3) * 0.05;
-        ctx.strokeStyle = `rgba(255, 200, 150, ${rainbowAlpha})`;
-        ctx.lineWidth = 4;
+        // 冷色調的底部光暈
+        const coolGlow = ctx.createLinearGradient(0, groundY - 50, 0, groundY + 10);
+        coolGlow.addColorStop(0, 'rgba(180, 190, 200, 0)');
+        coolGlow.addColorStop(0.5, 'rgba(170, 180, 195, 0.05)');
+        coolGlow.addColorStop(1, 'rgba(160, 175, 190, 0.1)');
+        ctx.fillStyle = coolGlow;
+        ctx.fillRect(0, groundY - 50, w, 60);
+
+        // 微風蕭瑟邊框（淡灰藍色）
+        const borderAlpha = 0.12 + Math.sin(time * 0.25) * 0.03;
+        ctx.strokeStyle = `rgba(150, 165, 180, ${borderAlpha})`;
+        ctx.lineWidth = 3;
         ctx.strokeRect(3, 3, w - 6, h - 6);
 
         ctx.restore();
