@@ -415,25 +415,8 @@ class Game {
                     return;
                 }
 
-                // 根據用戶選擇決定題目順序
-                const orderSelection = document.querySelector('input[name="question-order"]:checked');
-                const isRandom = orderSelection && orderSelection.value === 'random';
-
-                if (isRandom) {
-                    this.shuffleQuestions();
-                    this.questionOrderMode = 'random';
-                } else {
-                    this.questionOrderMode = 'sequential';
-                }
-
-                // 根據用戶選擇決定遊戲模式
-                const modeSelection = document.querySelector('input[name="game-mode"]:checked');
-                this.gameMode = modeSelection ? modeSelection.value : 'normal';
-
-                // 顯示檔案資訊
-                const orderText = isRandom ? '🎲 隨機順序' : '📋 依檔案順序';
-                const modeText = this.gameMode === 'duel' ? '💀 決鬥模式' : '⚔️ 一般模式';
-                fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題，${orderText}，${modeText})`;
+                // 顯示檔案資訊（選項會在開始遊戲時讀取）
+                fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題)`;
 
                 startBtn.disabled = false;
 
@@ -459,6 +442,27 @@ class Game {
 
     // ==================== 遊戲流程 ====================
     startGame() {
+        // 讀取題目順序選項
+        const orderSelection = document.querySelector('input[name="question-order"]:checked');
+        const isRandom = orderSelection && orderSelection.value === 'random';
+
+        if (isRandom) {
+            this.shuffleQuestions();
+            this.questionOrderMode = 'random';
+        } else {
+            this.questionOrderMode = 'sequential';
+        }
+
+        // 讀取遊戲模式選項
+        const modeSelection = document.querySelector('input[name="game-mode"]:checked');
+        this.gameMode = modeSelection ? modeSelection.value : 'normal';
+
+        console.log('遊戲設定:', {
+            questionOrder: this.questionOrderMode,
+            gameMode: this.gameMode,
+            questionsCount: this.questions.length
+        });
+
         this.switchScreen('init-screen', 'team-select-screen');
         this.state = GameState.TEAM_SELECT;
         document.querySelector('.player-indicator').textContent = '玩家 1 選擇陣營';
