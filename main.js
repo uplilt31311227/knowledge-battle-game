@@ -1036,6 +1036,11 @@ class Game {
         // 地面位置（配合背景街道地面）
         const groundY = h - 20;
 
+        // 決鬥模式：繪製地面燃燒特效
+        if (this.gameMode === 'duel') {
+            this.drawDuelFlames(groundY);
+        }
+
         // 繪製中間圍牆
         this.drawWall();
 
@@ -1751,6 +1756,101 @@ class Game {
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 3;
         ctx.strokeRect(wall.x - 5, wall.y - 8, wall.width + 10, 10);
+
+        ctx.restore();
+    }
+
+    // 決鬥模式地面燃燒特效
+    drawDuelFlames(groundY) {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const time = Date.now() / 100;
+
+        ctx.save();
+
+        // 地面紅色光暈
+        const glowGradient = ctx.createLinearGradient(0, groundY - 80, 0, groundY + 20);
+        glowGradient.addColorStop(0, 'rgba(255, 50, 0, 0)');
+        glowGradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.15)');
+        glowGradient.addColorStop(1, 'rgba(255, 50, 0, 0.4)');
+        ctx.fillStyle = glowGradient;
+        ctx.fillRect(0, groundY - 80, w, 100);
+
+        // 繪製多層火焰
+        const flameCount = 25;
+        for (let i = 0; i < flameCount; i++) {
+            const x = (w / flameCount) * i + (w / flameCount) / 2;
+            const baseHeight = 30 + Math.sin(time + i * 0.5) * 15;
+            const flicker = Math.sin(time * 3 + i * 1.7) * 0.3 + 0.7;
+
+            // 外層火焰（橙紅色）
+            ctx.beginPath();
+            ctx.moveTo(x - 15, groundY);
+            ctx.quadraticCurveTo(
+                x - 8 + Math.sin(time + i) * 5,
+                groundY - baseHeight * 0.6,
+                x + Math.sin(time * 2 + i) * 3,
+                groundY - baseHeight * flicker
+            );
+            ctx.quadraticCurveTo(
+                x + 8 + Math.sin(time + i + 1) * 5,
+                groundY - baseHeight * 0.6,
+                x + 15,
+                groundY
+            );
+            ctx.closePath();
+
+            const flameGradient = ctx.createLinearGradient(x, groundY, x, groundY - baseHeight);
+            flameGradient.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+            flameGradient.addColorStop(0.3, 'rgba(255, 150, 0, 0.6)');
+            flameGradient.addColorStop(0.6, 'rgba(255, 200, 50, 0.4)');
+            flameGradient.addColorStop(1, 'rgba(255, 255, 100, 0)');
+            ctx.fillStyle = flameGradient;
+            ctx.fill();
+
+            // 內層火焰（黃色核心）
+            const innerHeight = baseHeight * 0.6;
+            ctx.beginPath();
+            ctx.moveTo(x - 8, groundY);
+            ctx.quadraticCurveTo(
+                x - 3 + Math.sin(time * 1.5 + i) * 3,
+                groundY - innerHeight * 0.5,
+                x + Math.sin(time * 2.5 + i) * 2,
+                groundY - innerHeight * flicker
+            );
+            ctx.quadraticCurveTo(
+                x + 3 + Math.sin(time * 1.5 + i + 1) * 3,
+                groundY - innerHeight * 0.5,
+                x + 8,
+                groundY
+            );
+            ctx.closePath();
+
+            const innerGradient = ctx.createLinearGradient(x, groundY, x, groundY - innerHeight);
+            innerGradient.addColorStop(0, 'rgba(255, 200, 50, 0.9)');
+            innerGradient.addColorStop(0.5, 'rgba(255, 255, 150, 0.6)');
+            innerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = innerGradient;
+            ctx.fill();
+        }
+
+        // 火花粒子
+        for (let i = 0; i < 15; i++) {
+            const sparkX = (Math.sin(time * 0.7 + i * 2.3) * 0.5 + 0.5) * w;
+            const sparkY = groundY - 20 - Math.abs(Math.sin(time * 2 + i * 1.1)) * 60;
+            const sparkSize = 2 + Math.sin(time * 3 + i) * 1;
+            const sparkAlpha = 0.5 + Math.sin(time * 4 + i * 0.8) * 0.3;
+
+            ctx.beginPath();
+            ctx.arc(sparkX, sparkY, sparkSize, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 200, 50, ${sparkAlpha})`;
+            ctx.fill();
+        }
+
+        // 邊緣暗紅色邊框
+        ctx.strokeStyle = 'rgba(150, 0, 0, 0.5)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(2, 2, w - 4, this.canvas.height - 4);
 
         ctx.restore();
     }
