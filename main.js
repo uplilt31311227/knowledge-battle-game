@@ -14,7 +14,8 @@ const ASSETS = {
         hurt: 'assets/cat/hurt.png',           // 貓咪受傷
         taunt: 'assets/cat/taunt.png',         // 貓咪嘲諷
         projectile: 'assets/cat/projectile.png', // 貓咪投擲物（魚）
-        portrait: 'assets/portraits/cat_portrait.png'  // 貓咪頭像（快打旋風風格）
+        portrait: 'assets/portraits/cat_portrait.png',  // 貓咪頭像（快打旋風風格）
+        super: 'assets/cat/cat_super.png'      // 貓咪超級賽亞人型態
     },
     // 狗狗陣營圖片（美式漫畫風格）
     dog: {
@@ -23,7 +24,8 @@ const ASSETS = {
         hurt: 'assets/dog/hurt.png',           // 狗狗受傷
         taunt: 'assets/dog/taunt.png',         // 狗狗嘲諷
         projectile: 'assets/dog/projectile.png', // 狗狗投擲物（骨頭）
-        portrait: 'assets/portraits/dog_portrait.png'  // 狗狗頭像（快打旋風風格）
+        portrait: 'assets/portraits/dog_portrait.png',  // 狗狗頭像（快打旋風風格）
+        super: 'assets/dog/dog_super.png'      // 狗狗超級賽亞人型態
     },
     // 背景與場景（美式漫畫風格）
     background: 'assets/background.png',  // 遊戲背景
@@ -224,6 +226,8 @@ class Game {
         loadImage('dog_projectile', ASSETS.dog.projectile, '🦴');
         loadImage('cat_portrait', ASSETS.cat.portrait, '🐱');
         loadImage('dog_portrait', ASSETS.dog.portrait, '🐶');
+        loadImage('cat_super', ASSETS.cat.super, '🐱');
+        loadImage('dog_super', ASSETS.dog.super, '🐶');
         loadImage('shield', ASSETS.shield, '🛡️');
         loadImage('explosion', ASSETS.explosion, '💥');
         loadImage('wall', ASSETS.wall, null);
@@ -1276,10 +1280,16 @@ class Game {
 
         // 根據動畫狀態選擇不同圖片
         let imgState = 'idle';
+        let isSuper = false;  // 超級賽亞人狀態
+
         if (player.animation === 'hurt') {
             imgState = 'hurt';
         } else if (player.animation === 'taunt') {
             imgState = 'taunt';
+        } else if (player.activeItem === 'double') {
+            // 雙倍攻擊啟用時，使用超級賽亞人型態
+            imgState = 'super';
+            isSuper = true;
         } else if (this.state === GameState.ATTACK && this.currentTurn === playerNum) {
             imgState = 'attack';
         }
@@ -1312,6 +1322,9 @@ class Game {
         } else if (imgState === 'attack') {
             // 攻擊狀態：放大 20%
             scale = 1.2;
+        } else if (isSuper) {
+            // 超級賽亞人狀態：放大 25%
+            scale = 1.25;
         }
 
         // 翻轉玩家2的角色（面向左邊）
@@ -1320,6 +1333,41 @@ class Game {
         // 應用動畫變換
         const drawX = player.x + offsetX;
         const drawY = player.y + offsetY;
+
+        // 超級賽亞人能量光環特效
+        if (isSuper) {
+            const time = Date.now() / 100;
+            const auraSize = size * 0.7;
+
+            // 外層金色光暈
+            ctx.save();
+            ctx.translate(drawX, drawY);
+
+            // 動態光環
+            const gradient = ctx.createRadialGradient(0, 0, auraSize * 0.3, 0, 0, auraSize);
+            gradient.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
+            gradient.addColorStop(0.5, 'rgba(255, 165, 0, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, -size * 0.1, auraSize + Math.sin(time) * 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 閃爍火焰效果
+            ctx.globalAlpha = 0.5 + Math.sin(time * 2) * 0.3;
+            const flameGradient = ctx.createRadialGradient(0, -size * 0.2, 0, 0, -size * 0.2, auraSize * 0.8);
+            flameGradient.addColorStop(0, 'rgba(255, 255, 100, 0.8)');
+            flameGradient.addColorStop(0.4, 'rgba(255, 200, 0, 0.4)');
+            flameGradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            ctx.fillStyle = flameGradient;
+            ctx.beginPath();
+            ctx.arc(0, -size * 0.2, auraSize * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
 
         // 檢查圖片是否成功載入
         if (img && img.complete && img.naturalWidth > 0) {
