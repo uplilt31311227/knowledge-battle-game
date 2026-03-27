@@ -18,42 +18,48 @@
                 <p>請上傳 Excel 題庫檔案 (.xlsx)</p>
                 <p class="hint">格式：題目、選項A、選項B、選項C、選項D、正確解答</p>
 
-                <!-- 題目順序選擇 -->
-                <div class="order-selection">
-                    <p class="order-label">題目順序：</p>
-                    <div class="order-options">
-                        <label class="order-option">
-                            <input type="radio" name="question-order" value="sequential" checked>
-                            <span class="order-btn">📋 依檔案順序</span>
-                        </label>
-                        <label class="order-option">
-                            <input type="radio" name="question-order" value="random">
-                            <span class="order-btn">🎲 隨機順序</span>
-                        </label>
+                <!-- 設定選項（水平排列） -->
+                <div class="settings-row">
+                    <!-- 題目順序選擇 -->
+                    <div class="order-selection">
+                        <p class="order-label">📋 題目順序</p>
+                        <div class="order-options">
+                            <label class="order-option">
+                                <input type="radio" name="question-order" value="sequential" checked>
+                                <span class="order-btn">依檔案順序</span>
+                            </label>
+                            <label class="order-option">
+                                <input type="radio" name="question-order" value="random">
+                                <span class="order-btn">🎲 隨機</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 遊戲模式選擇 -->
+                    <div class="order-selection">
+                        <p class="order-label">⚔️ 遊戲模式</p>
+                        <div class="order-options">
+                            <label class="order-option">
+                                <input type="radio" name="game-mode" value="normal" checked>
+                                <span class="order-btn">一般模式</span>
+                            </label>
+                            <label class="order-option">
+                                <input type="radio" name="game-mode" value="duel">
+                                <span class="order-btn">💀 決鬥</span>
+                            </label>
+                        </div>
+                        <p class="mode-hint" id="mode-hint"></p>
                     </div>
                 </div>
 
-                <!-- 遊戲模式選擇 -->
-                <div class="order-selection">
-                    <p class="order-label">遊戲模式：</p>
-                    <div class="order-options">
-                        <label class="order-option">
-                            <input type="radio" name="game-mode" value="normal" checked>
-                            <span class="order-btn">⚔️ 一般模式</span>
-                        </label>
-                        <label class="order-option">
-                            <input type="radio" name="game-mode" value="duel">
-                            <span class="order-btn">💀 決鬥模式</span>
-                        </label>
-                    </div>
-                    <p class="mode-hint" id="mode-hint"></p>
+                <!-- 上傳區域 -->
+                <div class="upload-area">
+                    <label for="excel-upload" class="upload-btn">
+                        📁 選擇檔案
+                    </label>
+                    <input type="file" id="excel-upload" accept=".xlsx,.xls" hidden>
+                    <span id="file-name" class="file-name"></span>
                 </div>
-
-                <label for="excel-upload" class="upload-btn">
-                    📁 選擇檔案
-                </label>
-                <input type="file" id="excel-upload" accept=".xlsx,.xls" hidden>
-                <p id="file-name" class="file-name"></p>
                 <p id="upload-error" class="error-msg"></p>
             </div>
             <button id="start-btn" class="main-btn" disabled>開始遊戲</button>
