@@ -1959,16 +1959,38 @@ class Game {
         ctx.fillStyle = mistGradient;
         ctx.fillRect(0, 0, w, h);
 
-        // 飄落的落葉（秋風蕭瑟感）
+        // 飄落的落葉（秋風蕭瑟感）- 長距離飄動並淡出
         for (let i = 0; i < 12; i++) {
-            // 落葉從左往右飄動，緩慢下落
-            const leafTime = time * 0.3 + i * 50;
-            const leafX = ((leafTime * 0.8 + i * 120) % (w + 100)) - 50;
-            const leafBaseY = ((leafTime * 0.4 + i * 80) % (h + 50)) - 25;
-            const leafY = leafBaseY + Math.sin(time * 0.5 + i * 0.8) * 15;
-            const leafSize = 8 + (i % 4) * 2;
-            const leafRotation = time * 0.8 + i * 1.2 + Math.sin(time * 0.6 + i) * 0.5;
-            const leafAlpha = 0.5 + Math.sin(time * 0.4 + i * 0.6) * 0.15;
+            // 落葉從左側飄入，長距離飄動穿越整個畫面
+            const leafCycleLength = w * 2.5;  // 飄動總距離（畫面寬度的 2.5 倍）
+            const leafSpeed = 0.6 + (i % 3) * 0.15;  // 不同葉子有不同速度
+            const leafTime = time * leafSpeed + i * 200;
+
+            // 計算在飄動週期中的進度 (0 到 1)
+            const leafProgress = (leafTime % leafCycleLength) / leafCycleLength;
+
+            // X 座標：從左側 -100 飄到右側 w+100
+            const leafX = -100 + leafProgress * (w + 200);
+
+            // Y 座標：緩慢下落 + 波浪起伏
+            const leafBaseY = h * 0.1 + leafProgress * h * 0.7;  // 從上往下飄
+            const leafY = leafBaseY + Math.sin(time * 0.5 + i * 0.8) * 25 + Math.sin(time * 0.3 + i * 1.2) * 15;
+
+            const leafSize = 10 + (i % 4) * 3;
+            const leafRotation = time * 1.2 + i * 1.5 + Math.sin(time * 0.8 + i) * 1.0;  // 更多旋轉
+
+            // 透明度：開始淡入，中間最清晰，最後淡出
+            let leafAlpha;
+            if (leafProgress < 0.15) {
+                // 開始 15%：淡入
+                leafAlpha = (leafProgress / 0.15) * 0.7;
+            } else if (leafProgress > 0.7) {
+                // 最後 30%：淡出
+                leafAlpha = ((1 - leafProgress) / 0.3) * 0.7;
+            } else {
+                // 中間：完全可見
+                leafAlpha = 0.7 + Math.sin(time * 0.4 + i * 0.6) * 0.1;
+            }
 
             ctx.save();
             ctx.translate(leafX, leafY);
@@ -1985,17 +2007,17 @@ class Game {
 
             // 秋天色調：褐色、橙色、黃色
             const leafColors = [
-                'rgba(180, 100, 60, 0.85)',   // 褐色
-                'rgba(210, 130, 50, 0.85)',   // 橙色
-                'rgba(190, 160, 70, 0.85)',   // 黃褐色
-                'rgba(160, 90, 50, 0.85)'     // 深褐色
+                'rgba(180, 100, 60, 0.9)',    // 褐色
+                'rgba(210, 130, 50, 0.9)',    // 橙色
+                'rgba(190, 160, 70, 0.9)',    // 黃褐色
+                'rgba(160, 90, 50, 0.9)'      // 深褐色
             ];
             ctx.fillStyle = leafColors[i % 4];
             ctx.fill();
 
             // 葉脈
-            ctx.strokeStyle = 'rgba(100, 60, 30, 0.4)';
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = 'rgba(100, 60, 30, 0.5)';
+            ctx.lineWidth = 0.8;
             ctx.beginPath();
             ctx.moveTo(0, -leafSize * 0.8);
             ctx.lineTo(0, leafSize * 0.3);
