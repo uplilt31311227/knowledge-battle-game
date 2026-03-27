@@ -1847,6 +1847,58 @@ class Game {
             ctx.fill();
         }
 
+        // 煙霧粒子效果
+        for (let i = 0; i < 20; i++) {
+            const smokeX = (Math.sin(time * 0.3 + i * 1.8) * 0.5 + 0.5) * w;
+            const smokeBaseY = groundY - 60 - i * 8;
+            const smokeY = smokeBaseY - Math.sin(time * 0.5 + i * 0.7) * 20;
+            const smokeSize = 15 + Math.sin(time * 0.4 + i) * 8 + i * 2;
+            const smokeAlpha = Math.max(0, 0.15 - i * 0.006) * (0.7 + Math.sin(time * 0.6 + i) * 0.3);
+
+            const smokeGradient = ctx.createRadialGradient(smokeX, smokeY, 0, smokeX, smokeY, smokeSize);
+            smokeGradient.addColorStop(0, `rgba(80, 60, 50, ${smokeAlpha})`);
+            smokeGradient.addColorStop(0.5, `rgba(60, 50, 45, ${smokeAlpha * 0.6})`);
+            smokeGradient.addColorStop(1, 'rgba(50, 40, 35, 0)');
+
+            ctx.beginPath();
+            ctx.arc(smokeX, smokeY, smokeSize, 0, Math.PI * 2);
+            ctx.fillStyle = smokeGradient;
+            ctx.fill();
+        }
+
+        // 熱浪扭曲效果
+        for (let i = 0; i < 8; i++) {
+            const waveX = (w / 8) * i + (w / 16);
+            const waveOffset = Math.sin(time * 1.5 + i * 0.8) * 10;
+            const waveHeight = 100 + Math.sin(time * 0.8 + i) * 30;
+
+            ctx.beginPath();
+            ctx.moveTo(waveX + waveOffset, groundY - 30);
+
+            // 繪製波浪形熱浪
+            for (let j = 0; j < 5; j++) {
+                const segmentY = groundY - 30 - (waveHeight / 5) * (j + 1);
+                const curveOffset = Math.sin(time * 2 + i + j * 0.5) * (8 + j * 2);
+                ctx.quadraticCurveTo(
+                    waveX + curveOffset + waveOffset,
+                    segmentY + waveHeight / 10,
+                    waveX - curveOffset + waveOffset,
+                    segmentY
+                );
+            }
+
+            const heatGradient = ctx.createLinearGradient(waveX, groundY - 30, waveX, groundY - 30 - waveHeight);
+            heatGradient.addColorStop(0, 'rgba(255, 150, 50, 0.08)');
+            heatGradient.addColorStop(0.3, 'rgba(255, 200, 100, 0.05)');
+            heatGradient.addColorStop(0.7, 'rgba(255, 220, 150, 0.03)');
+            heatGradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+
+            ctx.strokeStyle = heatGradient;
+            ctx.lineWidth = 3 + Math.sin(time + i) * 1.5;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+
         // 邊緣暗紅色邊框
         ctx.strokeStyle = 'rgba(150, 0, 0, 0.5)';
         ctx.lineWidth = 3;
