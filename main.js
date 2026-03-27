@@ -1036,9 +1036,13 @@ class Game {
         // 地面位置（配合背景街道地面）
         const groundY = h - 20;
 
-        // 決鬥模式：繪製地面燃燒特效
+        // 模式特效：根據遊戲模式繪製不同場景特效
         if (this.gameMode === 'duel') {
+            // 決鬥模式：地面燃燒特效
             this.drawDuelFlames(groundY);
+        } else {
+            // 一般模式：陽光、花瓣、彩虹光暈特效
+            this.drawNormalModeEffects(groundY);
         }
 
         // 繪製中間圍牆
@@ -1375,6 +1379,13 @@ class Game {
             // 超級賽亞人狀態：放大 25%，並調整 Y 軸讓角色站穩
             scale = 1.25;
             offsetY = size * 0.1;  // 向下偏移補償放大效果
+        } else if (imgState === 'idle' && this.gameMode === 'normal') {
+            // 一般模式待機狀態：呼吸效果（微小的縮放和輕微上下移動）
+            const breathTime = Date.now() / 1000;
+            const breathScale = 1 + Math.sin(breathTime * 2 + playerNum) * 0.02;
+            const breathY = Math.sin(breathTime * 2 + playerNum) * 3;
+            scale = breathScale;
+            offsetY = breathY;
         }
 
         // 翻轉玩家2的角色（面向左邊）
@@ -1416,6 +1427,29 @@ class Game {
             ctx.fill();
 
             ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+
+        // 一般模式角色光暈效果（溫和的白色/彩色光環）
+        if (this.gameMode === 'normal' && imgState === 'idle' && !isSuper) {
+            const time = Date.now() / 100;
+            const auraSize = size * 0.55;
+
+            ctx.save();
+            ctx.translate(drawX, drawY);
+
+            // 溫和的白色光暈
+            const gentleGlow = ctx.createRadialGradient(0, 0, auraSize * 0.2, 0, 0, auraSize);
+            const glowAlpha = 0.15 + Math.sin(time * 0.5) * 0.05;
+            gentleGlow.addColorStop(0, `rgba(255, 255, 255, ${glowAlpha})`);
+            gentleGlow.addColorStop(0.5, `rgba(255, 250, 230, ${glowAlpha * 0.5})`);
+            gentleGlow.addColorStop(1, 'rgba(255, 245, 200, 0)');
+
+            ctx.fillStyle = gentleGlow;
+            ctx.beginPath();
+            ctx.arc(0, 0, auraSize + Math.sin(time * 0.8) * 5, 0, Math.PI * 2);
+            ctx.fill();
+
             ctx.restore();
         }
 
@@ -1903,6 +1937,155 @@ class Game {
         ctx.strokeStyle = 'rgba(150, 0, 0, 0.5)';
         ctx.lineWidth = 3;
         ctx.strokeRect(2, 2, w - 4, this.canvas.height - 4);
+
+        ctx.restore();
+    }
+
+    // 一般模式場景特效（陽光、花瓣、彩虹光暈）
+    drawNormalModeEffects(groundY) {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const time = Date.now() / 100;
+
+        ctx.save();
+
+        // 陽光光束效果（從右上角射出）
+        const sunX = w * 0.85;
+        const sunY = h * 0.1;
+
+        // 太陽光暈
+        const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 150);
+        sunGlow.addColorStop(0, 'rgba(255, 255, 200, 0.4)');
+        sunGlow.addColorStop(0.3, 'rgba(255, 255, 150, 0.2)');
+        sunGlow.addColorStop(0.7, 'rgba(255, 230, 100, 0.1)');
+        sunGlow.addColorStop(1, 'rgba(255, 220, 80, 0)');
+        ctx.fillStyle = sunGlow;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, 150 + Math.sin(time * 0.5) * 20, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 動態陽光光束
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI * 0.3) + (i * 0.15) + Math.sin(time * 0.3 + i) * 0.05;
+            const rayLength = 400 + Math.sin(time * 0.5 + i * 0.7) * 50;
+            const rayWidth = 30 + Math.sin(time * 0.8 + i) * 10;
+            const rayAlpha = 0.08 + Math.sin(time * 0.6 + i * 0.5) * 0.03;
+
+            ctx.beginPath();
+            ctx.moveTo(sunX, sunY);
+            ctx.lineTo(
+                sunX - Math.cos(angle) * rayLength - rayWidth,
+                sunY + Math.sin(angle) * rayLength
+            );
+            ctx.lineTo(
+                sunX - Math.cos(angle) * rayLength + rayWidth,
+                sunY + Math.sin(angle) * rayLength
+            );
+            ctx.closePath();
+
+            const rayGradient = ctx.createLinearGradient(sunX, sunY, sunX - Math.cos(angle) * rayLength, sunY + Math.sin(angle) * rayLength);
+            rayGradient.addColorStop(0, `rgba(255, 255, 200, ${rayAlpha * 2})`);
+            rayGradient.addColorStop(0.5, `rgba(255, 255, 150, ${rayAlpha})`);
+            rayGradient.addColorStop(1, 'rgba(255, 255, 100, 0)');
+            ctx.fillStyle = rayGradient;
+            ctx.fill();
+        }
+
+        // 漂浮的花瓣/葉片粒子
+        for (let i = 0; i < 15; i++) {
+            const petalX = (Math.sin(time * 0.2 + i * 1.3) * 0.5 + 0.5) * w;
+            const petalBaseY = (Math.sin(time * 0.15 + i * 0.9) * 0.3 + 0.4) * h;
+            const petalY = petalBaseY + Math.sin(time * 0.4 + i * 0.6) * 30;
+            const petalSize = 6 + Math.sin(time * 0.3 + i) * 2;
+            const petalRotation = time * 0.5 + i * 0.8;
+            const petalAlpha = 0.4 + Math.sin(time * 0.5 + i * 0.7) * 0.2;
+
+            ctx.save();
+            ctx.translate(petalX, petalY);
+            ctx.rotate(petalRotation);
+            ctx.globalAlpha = petalAlpha;
+
+            // 花瓣形狀
+            ctx.beginPath();
+            ctx.ellipse(0, 0, petalSize * 1.5, petalSize * 0.6, 0, 0, Math.PI * 2);
+
+            // 粉色或白色花瓣
+            const hue = (i % 3 === 0) ? 'rgba(255, 200, 220, 0.8)' :
+                        (i % 3 === 1) ? 'rgba(255, 255, 255, 0.8)' : 'rgba(200, 255, 220, 0.8)';
+            ctx.fillStyle = hue;
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // 地面草地微風效果
+        for (let i = 0; i < 30; i++) {
+            const grassX = (w / 30) * i + (w / 60);
+            const grassHeight = 15 + Math.sin(i * 0.5) * 5;
+            const sway = Math.sin(time * 1.5 + i * 0.3) * 5;
+
+            ctx.beginPath();
+            ctx.moveTo(grassX, groundY);
+            ctx.quadraticCurveTo(
+                grassX + sway,
+                groundY - grassHeight * 0.5,
+                grassX + sway * 1.5,
+                groundY - grassHeight
+            );
+            ctx.strokeStyle = `rgba(100, 180, 100, ${0.3 + Math.sin(time + i) * 0.1})`;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+
+        // 溫暖的底部光暈
+        const warmGlow = ctx.createLinearGradient(0, groundY - 40, 0, groundY + 10);
+        warmGlow.addColorStop(0, 'rgba(255, 230, 150, 0)');
+        warmGlow.addColorStop(0.5, 'rgba(255, 220, 130, 0.08)');
+        warmGlow.addColorStop(1, 'rgba(255, 200, 100, 0.15)');
+        ctx.fillStyle = warmGlow;
+        ctx.fillRect(0, groundY - 40, w, 50);
+
+        // 閃爍的星星光點（代表歡樂氣氛）
+        for (let i = 0; i < 8; i++) {
+            const sparkleX = (Math.sin(time * 0.1 + i * 2.5) * 0.4 + 0.5) * w;
+            const sparkleY = (Math.sin(time * 0.08 + i * 1.8) * 0.3 + 0.25) * h;
+            const sparkleSize = 3 + Math.sin(time * 2 + i * 1.2) * 2;
+            const sparkleAlpha = 0.3 + Math.sin(time * 3 + i) * 0.3;
+
+            // 四角星形
+            ctx.save();
+            ctx.translate(sparkleX, sparkleY);
+            ctx.globalAlpha = sparkleAlpha;
+
+            ctx.beginPath();
+            for (let j = 0; j < 4; j++) {
+                const angle = (j * Math.PI / 2) + time * 0.5;
+                ctx.moveTo(0, 0);
+                ctx.lineTo(
+                    Math.cos(angle) * sparkleSize * 2,
+                    Math.sin(angle) * sparkleSize * 2
+                );
+            }
+            ctx.strokeStyle = 'rgba(255, 255, 200, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 中心光點
+            ctx.beginPath();
+            ctx.arc(0, 0, sparkleSize * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // 彩虹光暈邊框（柔和版本）
+        const rainbowAlpha = 0.15 + Math.sin(time * 0.3) * 0.05;
+        ctx.strokeStyle = `rgba(255, 200, 150, ${rainbowAlpha})`;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(3, 3, w - 6, h - 6);
 
         ctx.restore();
     }
