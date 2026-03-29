@@ -46,7 +46,7 @@ const CONFIG = {
     GRAVITY: 0.4,              // 重力加速度（降低讓拋物線更遠）
     MAX_POWER: 60,             // 最大發射力道
     POWER_MULTIPLIER: 0.35,    // 拖拽距離轉力道係數
-    PROJECTILE_SPEED: 0.5,     // 飛行物動畫速度係數（降低50%）
+    PROJECTILE_SPEED: 0.55,    // 飛行物動畫速度係數（提升10%）
 
     // 傷害計算
     // 傷害設定（三區域判定）
