@@ -4,6 +4,400 @@
  * 專為大型觸控螢幕設計
  */
 
+// ==================== 音效系統 ====================
+class SoundManager {
+    constructor() {
+        this.audioContext = null;
+        this.bgmGain = null;
+        this.sfxGain = null;
+        this.bgmPlaying = false;
+        this.bgmNodes = [];
+    }
+
+    init() {
+        if (this.audioContext) return;
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // 主音量控制
+        this.bgmGain = this.audioContext.createGain();
+        this.bgmGain.gain.value = 0.3;
+        this.bgmGain.connect(this.audioContext.destination);
+
+        this.sfxGain = this.audioContext.createGain();
+        this.sfxGain.gain.value = 0.5;
+        this.sfxGain.connect(this.audioContext.destination);
+    }
+
+    // 緊張刺激的戰鬥配樂
+    playBattleBGM() {
+        if (this.bgmPlaying) return;
+        this.init();
+        this.bgmPlaying = true;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        // 低音鼓點節奏 (緊張感)
+        const playDrumLoop = () => {
+            if (!this.bgmPlaying) return;
+
+            const loopDuration = 2; // 2秒一個循環
+            const startTime = ctx.currentTime;
+
+            // 低音鼓 - 每拍一次
+            for (let i = 0; i < 8; i++) {
+                const kickTime = startTime + (i * 0.25);
+                this.playKick(kickTime);
+            }
+
+            // 重音強調 (第1和第5拍)
+            this.playKick(startTime, 1.5);
+            this.playKick(startTime + 1, 1.5);
+
+            // Hi-hat 快節奏
+            for (let i = 0; i < 16; i++) {
+                this.playHiHat(startTime + (i * 0.125), 0.3);
+            }
+
+            // 緊張的低頻脈衝
+            this.playTensionBass(startTime);
+
+            setTimeout(() => playDrumLoop(), loopDuration * 1000);
+        };
+
+        // 背景旋律循環
+        const playMelodyLoop = () => {
+            if (!this.bgmPlaying) return;
+
+            const loopDuration = 4; // 4秒一個循環
+            const startTime = ctx.currentTime;
+
+            // 緊張的小調旋律
+            const notes = [220, 207.65, 185, 196, 220, 246.94, 220, 185]; // A小調音階
+            notes.forEach((freq, i) => {
+                this.playMelodyNote(freq, startTime + (i * 0.5), 0.4);
+            });
+
+            setTimeout(() => playMelodyLoop(), loopDuration * 1000);
+        };
+
+        playDrumLoop();
+        setTimeout(() => playMelodyLoop(), 500);
+    }
+
+    playKick(time, volume = 1) {
+        const ctx = this.audioContext;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, time);
+        osc.frequency.exponentialRampToValueAtTime(50, time + 0.1);
+
+        gain.gain.setValueAtTime(0.6 * volume, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.bgmGain);
+
+        osc.start(time);
+        osc.stop(time + 0.15);
+    }
+
+    playHiHat(time, volume = 0.3) {
+        const ctx = this.audioContext;
+        const bufferSize = ctx.sampleRate * 0.05;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
+        }
+
+        const source = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        filter.type = 'highpass';
+        filter.frequency.value = 7000;
+
+        source.buffer = buffer;
+        gain.gain.value = volume;
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.bgmGain);
+
+        source.start(time);
+    }
+
+    playTensionBass(time) {
+        const ctx = this.audioContext;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(55, time);
+        osc.frequency.linearRampToValueAtTime(65, time + 1);
+        osc.frequency.linearRampToValueAtTime(55, time + 2);
+
+        gain.gain.setValueAtTime(0.15, time);
+        gain.gain.linearRampToValueAtTime(0.2, time + 1);
+        gain.gain.linearRampToValueAtTime(0.01, time + 2);
+
+        osc.connect(gain);
+        gain.connect(this.bgmGain);
+
+        osc.start(time);
+        osc.stop(time + 2);
+    }
+
+    playMelodyNote(freq, time, duration) {
+        const ctx = this.audioContext;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'square';
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(0.1, time + 0.05);
+        gain.gain.linearRampToValueAtTime(0.08, time + duration * 0.7);
+        gain.gain.linearRampToValueAtTime(0, time + duration);
+
+        osc.connect(gain);
+        gain.connect(this.bgmGain);
+
+        osc.start(time);
+        osc.stop(time + duration);
+    }
+
+    stopBGM() {
+        this.bgmPlaying = false;
+    }
+
+    // 技能音效
+    playSkillSound(skillType) {
+        this.init();
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        switch (skillType) {
+            case 'double':
+                this.playPowerUpSound(now);
+                break;
+            case 'heal':
+                this.playHealSound(now);
+                break;
+            case 'shield':
+                this.playShieldSound(now);
+                break;
+            case 'bigWeapon':
+                this.playBigWeaponSound(now);
+                break;
+        }
+    }
+
+    // 加倍傷害音效 - 強力衝擊感
+    playPowerUpSound(time) {
+        const ctx = this.audioContext;
+
+        // 上升音效
+        for (let i = 0; i < 5; i++) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200 + i * 100, time + i * 0.05);
+            osc.frequency.exponentialRampToValueAtTime(800 + i * 100, time + i * 0.05 + 0.1);
+
+            gain.gain.setValueAtTime(0.2, time + i * 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, time + i * 0.05 + 0.15);
+
+            osc.connect(gain);
+            gain.connect(this.sfxGain);
+            osc.start(time + i * 0.05);
+            osc.stop(time + i * 0.05 + 0.15);
+        }
+
+        // 結尾衝擊
+        const impactOsc = ctx.createOscillator();
+        const impactGain = ctx.createGain();
+        impactOsc.type = 'square';
+        impactOsc.frequency.setValueAtTime(150, time + 0.25);
+        impactGain.gain.setValueAtTime(0.3, time + 0.25);
+        impactGain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+        impactOsc.connect(impactGain);
+        impactGain.connect(this.sfxGain);
+        impactOsc.start(time + 0.25);
+        impactOsc.stop(time + 0.5);
+    }
+
+    // 恢復血量音效 - 柔和治癒感
+    playHealSound(time) {
+        const ctx = this.audioContext;
+        const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 和弦
+
+        notes.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+
+            const noteTime = time + i * 0.1;
+            gain.gain.setValueAtTime(0, noteTime);
+            gain.gain.linearRampToValueAtTime(0.15, noteTime + 0.1);
+            gain.gain.linearRampToValueAtTime(0, noteTime + 0.5);
+
+            osc.connect(gain);
+            gain.connect(this.sfxGain);
+            osc.start(noteTime);
+            osc.stop(noteTime + 0.5);
+        });
+
+        // 閃亮音效
+        const shimmer = ctx.createOscillator();
+        const shimmerGain = ctx.createGain();
+        shimmer.type = 'sine';
+        shimmer.frequency.setValueAtTime(2000, time + 0.3);
+        shimmer.frequency.exponentialRampToValueAtTime(4000, time + 0.6);
+        shimmerGain.gain.setValueAtTime(0.08, time + 0.3);
+        shimmerGain.gain.exponentialRampToValueAtTime(0.01, time + 0.6);
+        shimmer.connect(shimmerGain);
+        shimmerGain.connect(this.sfxGain);
+        shimmer.start(time + 0.3);
+        shimmer.stop(time + 0.6);
+    }
+
+    // 護盾音效 - 能量護罩啟動
+    playShieldSound(time) {
+        const ctx = this.audioContext;
+
+        // 能量聚集
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(100, time);
+        osc1.frequency.exponentialRampToValueAtTime(500, time + 0.3);
+        gain1.gain.setValueAtTime(0.2, time);
+        gain1.gain.linearRampToValueAtTime(0.3, time + 0.15);
+        gain1.gain.exponentialRampToValueAtTime(0.01, time + 0.4);
+        osc1.connect(gain1);
+        gain1.connect(this.sfxGain);
+        osc1.start(time);
+        osc1.stop(time + 0.4);
+
+        // 護盾展開聲
+        const bufferSize = ctx.sampleRate * 0.3;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            const t = i / ctx.sampleRate;
+            data[i] = Math.sin(2 * Math.PI * 300 * t) * Math.exp(-t * 5) * 0.3 +
+                     (Math.random() * 2 - 1) * Math.exp(-t * 10) * 0.1;
+        }
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const sourceGain = ctx.createGain();
+        sourceGain.gain.value = 0.4;
+        source.connect(sourceGain);
+        sourceGain.connect(this.sfxGain);
+        source.start(time + 0.2);
+    }
+
+    // 放大武器音效 - 力量增強
+    playBigWeaponSound(time) {
+        const ctx = this.audioContext;
+
+        // 充能音效
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(80, time);
+        osc.frequency.exponentialRampToValueAtTime(200, time + 0.4);
+        gain.gain.setValueAtTime(0.15, time);
+        gain.gain.linearRampToValueAtTime(0.25, time + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(time);
+        osc.stop(time + 0.5);
+
+        // 爆發音效
+        for (let i = 0; i < 3; i++) {
+            const burstOsc = ctx.createOscillator();
+            const burstGain = ctx.createGain();
+            burstOsc.type = 'square';
+            burstOsc.frequency.value = 100 + i * 50;
+            const burstTime = time + 0.4 + i * 0.05;
+            burstGain.gain.setValueAtTime(0.2, burstTime);
+            burstGain.gain.exponentialRampToValueAtTime(0.01, burstTime + 0.1);
+            burstOsc.connect(burstGain);
+            burstGain.connect(this.sfxGain);
+            burstOsc.start(burstTime);
+            burstOsc.stop(burstTime + 0.1);
+        }
+    }
+
+    // 攻擊發射音效
+    playLaunchSound() {
+        this.init();
+        const ctx = this.audioContext;
+        const time = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, time);
+        osc.frequency.exponentialRampToValueAtTime(150, time + 0.2);
+        gain.gain.setValueAtTime(0.3, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(time);
+        osc.stop(time + 0.2);
+    }
+
+    // 擊中音效
+    playHitSound() {
+        this.init();
+        const ctx = this.audioContext;
+        const time = ctx.currentTime;
+
+        // 衝擊聲
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, time);
+        osc.frequency.exponentialRampToValueAtTime(50, time + 0.15);
+        gain.gain.setValueAtTime(0.4, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(time);
+        osc.stop(time + 0.2);
+
+        // 噪音衝擊
+        const bufferSize = ctx.sampleRate * 0.1;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+        }
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.value = 0.3;
+        source.connect(noiseGain);
+        noiseGain.connect(this.sfxGain);
+        source.start(time);
+    }
+}
+
+// 全域音效管理器實例
+const soundManager = new SoundManager();
+
 // ==================== 資源管理 ====================
 // 所有圖片資源集中於此，使用本地美式漫畫風格素材
 const ASSETS = {
@@ -484,6 +878,8 @@ class Game {
             this.switchScreen('team-select-screen', 'game-screen');
             this.state = GameState.READY;
             this.currentTurn = 1;
+            // 開始播放戰鬥配樂
+            soundManager.playBattleBGM();
             this.updateItemsUI();
             this.startTurn();
         }, 1000);
@@ -646,6 +1042,9 @@ class Game {
 
         this.state = GameState.PROJECTILE;
         document.getElementById('turn-indicator').textContent = '🚀 發射！';
+
+        // 播放發射音效
+        soundManager.playLaunchSound();
     }
 
     updateProjectile() {
@@ -724,6 +1123,9 @@ class Game {
     handleHit(distance) {
         this.projectile.active = false;
         this.state = GameState.HIT;
+
+        // 播放擊中音效
+        soundManager.playHitSound();
 
         const attacker = this.players[this.currentTurn];
         const targetNum = this.currentTurn === 1 ? 2 : 1;
@@ -880,6 +1282,9 @@ class Game {
 
         // 使用道具
         playerData.items[item]--;
+
+        // 播放技能音效
+        soundManager.playSkillSound(item);
 
         switch (item) {
             case 'double':
