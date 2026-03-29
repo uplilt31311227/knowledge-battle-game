@@ -222,6 +222,45 @@ html, body {
     background: linear-gradient(180deg, #5a5a7a 0%, #4a4a6a 100%);
 }
 
+/* 音效開關 */
+.sound-options {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sound-toggle {
+    cursor: pointer;
+    display: block;
+}
+
+.sound-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-btn {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    background: linear-gradient(180deg, #555 0%, #444 100%);
+    color: #999;
+    border: 2px solid #666;
+    border-radius: 15px;
+    transition: all 0.2s;
+    text-shadow: 1px 1px 1px #000;
+    min-width: 100px;
+}
+
+.sound-toggle input[type="checkbox"]:checked + .toggle-btn {
+    background: linear-gradient(180deg, #4CAF50 0%, #388E3C 100%);
+    color: #fff;
+    border-color: #66BB6A;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+.toggle-btn:hover {
+    transform: scale(1.05);
+}
+
 /* 上傳區域 */
 .upload-area {
     display: flex;
