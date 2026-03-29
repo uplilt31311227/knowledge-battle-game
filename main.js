@@ -844,8 +844,8 @@ const CONFIG = {
 
     // 傷害計算
     // 傷害設定（三區域判定）
-    DAMAGE_CENTER: 30,         // 中間擊中傷害
-    DAMAGE_INNER: 15,          // 中間兩側傷害
+    DAMAGE_CENTER: 35,         // 中間擊中傷害
+    DAMAGE_INNER: 25,          // 中間兩側傷害
     DAMAGE_OUTER: 10,          // 外面兩側傷害
     HIT_RADIUS: 130,           // 命中判定半徑（配合放大後的角色，增加30%）
 
