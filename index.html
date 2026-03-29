@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>知識大亂鬥 - 貓狗大戰</title>
-    <!-- SheetJS 用於讀取 Excel 檔案 -->
+    <!-- SheetJS 用於讀取 Excel 檔案 (含備用 CDN) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        if (typeof XLSX === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+        }
+    </script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>

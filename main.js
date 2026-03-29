@@ -1167,18 +1167,34 @@ class Game {
     // ==================== Excel 處理 ====================
     handleExcelUpload(e) {
         const file = e.target.files[0];
-        if (!file) return;
-
         const errorEl = document.getElementById('upload-error');
         const fileNameEl = document.getElementById('file-name');
         const startBtn = document.getElementById('start-btn');
 
+        // 清空之前的訊息
         errorEl.textContent = '';
         fileNameEl.textContent = '';
+
+        if (!file) {
+            console.log('未選擇檔案');
+            return;
+        }
+
+        console.log('選擇檔案:', file.name, file.type, file.size);
+        fileNameEl.textContent = `⏳ 正在載入 ${file.name}...`;
 
         // 檢查檔案類型
         if (!file.name.match(/\.(xlsx|xls)$/i)) {
             errorEl.textContent = '❌ 請上傳 Excel 檔案 (.xlsx 或 .xls)';
+            fileNameEl.textContent = '';
+            return;
+        }
+
+        // 檢查 XLSX 庫是否載入
+        if (typeof XLSX === 'undefined') {
+            errorEl.textContent = '❌ Excel 處理庫未載入，請重新整理頁面';
+            fileNameEl.textContent = '';
+            console.error('XLSX library not loaded');
             return;
         }
 
@@ -1186,19 +1202,22 @@ class Game {
 
         reader.onload = (event) => {
             try {
+                console.log('檔案讀取完成，開始解析...');
                 const data = new Uint8Array(event.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
 
                 // 讀取第一個工作表
                 const sheetName = workbook.SheetNames[0];
+                console.log('工作表名稱:', sheetName);
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                console.log('解析到', json.length, '列資料');
 
                 // 解析題目（跳過標題列）
                 this.questions = [];
                 for (let i = 1; i < json.length; i++) {
                     const row = json[i];
-                    if (row.length >= 6 && row[0]) {
+                    if (row && row.length >= 6 && row[0]) {
                         this.questions.push({
                             question: row[0],
                             options: {
@@ -1212,24 +1231,29 @@ class Game {
                     }
                 }
 
+                console.log('解析到', this.questions.length, '題');
+
                 if (this.questions.length === 0) {
-                    errorEl.textContent = '❌ 找不到有效題目，請確認格式是否正確';
+                    errorEl.textContent = '❌ 找不到有效題目，請確認格式：題目、選項A、選項B、選項C、選項D、正確解答';
+                    fileNameEl.textContent = '';
                     return;
                 }
 
-                // 顯示檔案資訊（選項會在開始遊戲時讀取）
+                // 顯示檔案資訊
                 fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題)`;
-
                 startBtn.disabled = false;
 
             } catch (err) {
                 console.error('Excel 解析錯誤:', err);
-                errorEl.textContent = '❌ 檔案解析失敗，請確認格式是否正確';
+                errorEl.textContent = '❌ 檔案解析失敗：' + err.message;
+                fileNameEl.textContent = '';
             }
         };
 
-        reader.onerror = () => {
+        reader.onerror = (err) => {
+            console.error('檔案讀取錯誤:', err);
             errorEl.textContent = '❌ 檔案讀取失敗';
+            fileNameEl.textContent = '';
         };
 
         reader.readAsArrayBuffer(file);
