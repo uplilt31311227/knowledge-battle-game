@@ -954,16 +954,6 @@ class Game {
         // 特效
         this.effects = [];
 
-        // 相機狀態（zoom out 效果）
-        this.camera = {
-            zoom: 1,
-            targetZoom: 1,
-            offsetX: 0,
-            offsetY: 0,
-            targetOffsetX: 0,
-            targetOffsetY: 0
-        };
-
         // 圖片快取
         this.images = {};
 
@@ -1123,26 +1113,17 @@ class Game {
             };
         };
 
-        // 螢幕座標轉世界座標（用於碰撞檢測）
-        const screenToWorld = (sx, sy) => ({
-            x: (sx - this.camera.offsetX) / this.camera.zoom,
-            y: (sy - this.camera.offsetY) / this.camera.zoom
-        });
-
         // 開始拖拽
         const startDrag = (e) => {
             if (this.state !== GameState.ATTACK) return;
             e.preventDefault();
 
-            const pos = getPointerPos(e); // 螢幕座標
+            const pos = getPointerPos(e);
             const player = this.players[this.currentTurn];
 
-            // 將螢幕座標轉為世界座標來檢測是否點擊在角色附近
-            const worldPos = screenToWorld(pos.x, pos.y);
-            const dist = Math.hypot(worldPos.x - player.x, worldPos.y - player.y);
+            const dist = Math.hypot(pos.x - player.x, pos.y - player.y);
             if (dist < CONFIG.CHARACTER_SIZE) {
                 this.drag.active = true;
-                // 存儲螢幕座標，避免 zoom 變化影響拖曳計算
                 this.drag.startX = pos.x;
                 this.drag.startY = pos.y;
                 this.drag.currentX = pos.x;
@@ -1915,38 +1896,12 @@ class Game {
         const w = this.canvas.width;
         const h = this.canvas.height;
 
-        // 更新相機
-        this.updateCamera();
-
         // 清除畫面
         ctx.clearRect(0, 0, w, h);
-
-        // zoom out 時先用天空色填滿整個 canvas，避免殘留黑邊
-        if (this.camera.zoom < 0.999) {
-            ctx.fillStyle = '#8a9399';
-            ctx.fillRect(0, 0, w, h);
-        }
-
-        // 套用相機 zoom out 變換
-        ctx.save();
-        if (this.camera.zoom < 0.999) {
-            ctx.translate(this.camera.offsetX, this.camera.offsetY);
-            ctx.scale(this.camera.zoom, this.camera.zoom);
-        }
 
         // 繪製背景圖片
         const bgImg = this.images['background'];
         if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
-            // zoom out 時先拉伸背景填滿整個可見區域（消除邊界空白）
-            if (this.camera.zoom < 0.999) {
-                const z = this.camera.zoom;
-                const pad = 30; // 額外 padding 消除浮點誤差邊縫
-                const vMinX = -this.camera.offsetX / z - pad;
-                const vMaxX = (w - this.camera.offsetX) / z + pad;
-                const vMinY = -this.camera.offsetY / z - pad;
-                ctx.drawImage(bgImg, vMinX, vMinY, vMaxX - vMinX, h - vMinY + pad);
-            }
-            // 正常大小背景覆蓋中心（保持清晰度）
             ctx.drawImage(bgImg, 0, 0, w, h);
         } else {
             // 備用：繪製漸層背景
@@ -2001,9 +1956,6 @@ class Game {
 
         // 繪製特效
         this.drawEffects();
-
-        // 還原相機變換
-        ctx.restore();
     }
 
     drawHealthBar(playerNum) {
@@ -2510,7 +2462,7 @@ class Game {
         }
     }
 
-    // 計算軌跡點（持續到拋物線頂點或撞牆）
+    // 計算軌跡點
     getTrajectoryPoints() {
         const player = this.players[this.currentTurn];
         const dx = this.drag.startX - this.drag.currentX;
@@ -2532,11 +2484,8 @@ class Game {
         const wall = this.getWallBounds();
         const points = [];
         let hitWall = false;
-        const shootingUp = vy < 0;
 
-        const maxIter = 300;
-        for (let i = 0; i < maxIter; i++) {
-            const prevVy = vy;
+        for (let i = 0; i < CONFIG.TRAJECTORY_DOTS; i++) {
             vy += CONFIG.GRAVITY;
             px += vx;
             py += vy;
@@ -2551,75 +2500,9 @@ class Game {
             }
 
             points.push({ x: px, y: py, hitWall: false });
-
-            // 向上發射時，到達頂點（vy 從負變正）即停止
-            if (shootingUp && prevVy < 0 && vy >= 0) break;
-
-            // 向下發射時，限制點數
-            if (!shootingUp && i >= CONFIG.TRAJECTORY_DOTS) break;
         }
 
         return { points, hitWall, startX, startY };
-    }
-
-    // 更新相機 zoom（平滑過渡）
-    updateCamera() {
-        const w = this.canvas.width;
-        const h = this.canvas.height;
-
-        if (this.drag.active && this.state === GameState.ATTACK) {
-            const traj = this.getTrajectoryPoints();
-            if (traj && traj.points.length > 0) {
-                // 計算軌跡包圍盒
-                let minX = 0, maxX = w, minY = 0;
-                for (const pt of traj.points) {
-                    if (pt.x < minX) minX = pt.x;
-                    if (pt.x > maxX) maxX = pt.x;
-                    if (pt.y < minY) minY = pt.y;
-                }
-
-                const padding = 80;
-                const needsZoom = minY < 0 || minX < 0 || maxX > w;
-
-                if (needsZoom) {
-                    // 計算需要的世界範圍
-                    const viewMinX = Math.min(0, minX - padding);
-                    const viewMaxX = Math.max(w, maxX + padding);
-                    const viewMinY = Math.min(0, minY - padding);
-                    const viewW = viewMaxX - viewMinX;
-                    const viewH = h - viewMinY;
-
-                    let targetZoom = Math.min(1, w / viewW, h / viewH);
-                    targetZoom = Math.max(0.5, targetZoom);
-
-                    this.camera.targetZoom = targetZoom;
-                    // 以畫面底部中央為錨點 zoom out
-                    this.camera.targetOffsetX = w / 2 * (1 - targetZoom);
-                    this.camera.targetOffsetY = h * (1 - targetZoom);
-                } else {
-                    this.camera.targetZoom = 1;
-                    this.camera.targetOffsetX = 0;
-                    this.camera.targetOffsetY = 0;
-                }
-            }
-        } else {
-            this.camera.targetZoom = 1;
-            this.camera.targetOffsetX = 0;
-            this.camera.targetOffsetY = 0;
-        }
-
-        // 平滑過渡
-        const lerp = 0.08;
-        this.camera.zoom += (this.camera.targetZoom - this.camera.zoom) * lerp;
-        this.camera.offsetX += (this.camera.targetOffsetX - this.camera.offsetX) * lerp;
-        this.camera.offsetY += (this.camera.targetOffsetY - this.camera.offsetY) * lerp;
-
-        // 接近目標時直接到位
-        if (Math.abs(this.camera.zoom - this.camera.targetZoom) < 0.001) {
-            this.camera.zoom = this.camera.targetZoom;
-            this.camera.offsetX = this.camera.targetOffsetX;
-            this.camera.offsetY = this.camera.targetOffsetY;
-        }
     }
 
     drawTrajectory() {
@@ -2636,15 +2519,13 @@ class Game {
         const dy = this.drag.startY - this.drag.currentY;
         const distance = Math.hypot(dx, dy);
 
-        // 繪製拉力線（將螢幕座標的拖曳位置轉為世界座標繪製）
-        const dragWorldX = (this.drag.currentX - this.camera.offsetX) / this.camera.zoom;
-        const dragWorldY = (this.drag.currentY - this.camera.offsetY) / this.camera.zoom;
+        // 繪製拉力線
         ctx.strokeStyle = '#ff6b6b';
         ctx.lineWidth = 3;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.moveTo(startX, startY);
-        ctx.lineTo(dragWorldX, dragWorldY);
+        ctx.lineTo(this.drag.currentX, this.drag.currentY);
         ctx.stroke();
         ctx.setLineDash([]);
 
