@@ -823,12 +823,9 @@ const ASSETS = {
     },
     // 背景與場景（美式漫畫風格）
     background: 'assets/background.png',  // 遊戲背景
-    ground: '#4a7c4a',  // 地面顏色（配合背景草地）
     // 特效
     explosion: 'assets/effects/explosion.png',  // 爆炸效果
-    shield: 'assets/effects/shield.png',        // 護盾效果
-    // 場景
-    wall: 'assets/wall.png'                     // 中間牆壁（美式風格）
+    shield: 'assets/effects/shield.png'         // 護盾效果
 };
 
 // ==================== 遊戲設定常數 ====================
@@ -861,8 +858,6 @@ const CONFIG = {
     WALL: {
         WIDTH: 80,             // 圍牆寬度（配合美式風格圖片）
         HEIGHT_RATIO: 0.5,     // 圍牆高度（相對於畫面高度的比例）
-        COLOR: '#8B4513',      // 圍牆顏色（備用）
-        BORDER_COLOR: '#5D3A1A' // 圍牆邊框顏色（備用）
     },
 
     // 動畫
@@ -954,8 +949,15 @@ class Game {
         // 特效
         this.effects = [];
 
+        // 快取 DOM 元素
+        this.turnIndicatorEl = document.getElementById('turn-indicator');
+
+        // 快取 getWallBounds 結果
+        this._wallBoundsCache = null;
+
         // 圖片快取
         this.images = {};
+        this.imagesLoaded = false;
 
         // 初始化
         this.init();
@@ -974,6 +976,7 @@ class Game {
         const resize = () => {
             this.canvas.width = window.innerWidth;
             this.canvas.height = window.innerHeight;
+            this._wallBoundsCache = null;  // 清除圍牆邊界快取
             this.updatePlayerPositions();
         };
         window.addEventListener('resize', resize);
@@ -983,29 +986,35 @@ class Game {
     updatePlayerPositions() {
         // 玩家1 在左側，玩家2 在右側
         // 角色站在畫面底部（配合背景街道地面）
-        const groundY = this.canvas.height - 30;
+        const groundY = this.canvas.height - 20;
         this.players[1].x = this.canvas.width * 0.15;
         this.players[1].y = groundY - CONFIG.CHARACTER_SIZE / 2;
         this.players[2].x = this.canvas.width * 0.85;
         this.players[2].y = groundY - CONFIG.CHARACTER_SIZE / 2;
     }
 
+    // ==================== 圖片載入 ====================
     loadImages() {
-        // 預載入所有圖片，加入載入失敗的備用方案
-        const loadImage = (key, url, fallbackEmoji) => {
+        const promises = [];
+        const loadImage = (key, src, fallbackEmoji) => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                this.images[key] = img;
-                this.images[key].loaded = true;
-            };
-            img.onerror = () => {
-                // 載入失敗時使用 emoji 備用
-                this.images[key] = { emoji: fallbackEmoji, loaded: false };
-            };
-            img.src = url;
+            const promise = new Promise((resolve) => {
+                img.onload = () => {
+                    this.images[key] = img;
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.warn(`Failed to load: ${src}`);
+                    if (fallbackEmoji) {
+                        this.images[key] = { emoji: fallbackEmoji, complete: false, naturalWidth: 0 };
+                    }
+                    resolve();
+                };
+                img.src = src;
+            });
+            promises.push(promise);
             this.images[key] = img;
-            this.images[key].fallbackEmoji = fallbackEmoji;
         };
 
         loadImage('background', ASSETS.background, null);
@@ -1025,7 +1034,11 @@ class Game {
         loadImage('dog_super', ASSETS.dog.super, '🐶');
         loadImage('shield', ASSETS.shield, '🛡️');
         loadImage('explosion', ASSETS.explosion, '💥');
-        loadImage('wall', ASSETS.wall, null);
+
+        Promise.all(promises).then(() => {
+            this.imagesLoaded = true;
+            console.log('所有圖片載入完成');
+        });
 
         // 設定陣營選擇畫面的圖片
         const catImg = document.getElementById('cat-select-img');
@@ -1321,7 +1334,7 @@ class Game {
         this.players[this.currentTurn].activeItem = null;
 
         // 更新回合提示
-        const indicator = document.getElementById('turn-indicator');
+        const indicator = this.turnIndicatorEl;
         const teamName = this.players[this.currentTurn].team === 'cat' ? '貓咪隊' : '狗狗隊';
         indicator.textContent = `🎯 玩家 ${this.currentTurn} (${teamName}) 的回合`;
 
@@ -1422,7 +1435,7 @@ class Game {
                 document.getElementById('question-modal').classList.remove('active');
                 this.state = GameState.ATTACK;
                 this.updateItemsUI(); // 重要：更新道具按鈕狀態
-                document.getElementById('turn-indicator').textContent =
+                this.turnIndicatorEl.textContent =
                     `🎮 玩家 ${this.currentTurn} 拖拽角色來攻擊！`;
                 this.currentQuestionIndex++;
 
@@ -1484,7 +1497,7 @@ class Game {
         }
 
         this.state = GameState.PROJECTILE;
-        document.getElementById('turn-indicator').textContent = '🚀 發射！';
+        this.turnIndicatorEl.textContent = '🚀 發射！';
 
         // 播放發射音效
         soundManager.playLaunchSound();
@@ -1556,7 +1569,7 @@ class Game {
         // 在撞牆位置顯示爆炸效果
         this.addEffect(this.projectile.x, this.projectile.y, 'wall_hit');
 
-        document.getElementById('turn-indicator').textContent = '💥 撞到圍牆了！';
+        this.turnIndicatorEl.textContent = '💥 撞到圍牆了！';
 
         // 切換回一般模式
         soundManager.setBGMMode('normal');
@@ -1617,7 +1630,7 @@ class Game {
         if (target.hasShield) {
             damage = 0;
             target.hasShield = false;
-            document.getElementById('turn-indicator').textContent = '🛡️ 護盾擋住了攻擊！';
+            this.turnIndicatorEl.textContent = '🛡️ 護盾擋住了攻擊！';
             this.addEffect(target.x, target.y, 'shield');
 
             // 播放護盾擋住音效
@@ -1631,10 +1644,10 @@ class Game {
 
             // 根據模式顯示不同訊息
             if (this.gameMode === 'duel') {
-                document.getElementById('turn-indicator').textContent =
+                this.turnIndicatorEl.textContent =
                     `💀 一擊必殺！命中${hitZone}！`;
             } else {
-                document.getElementById('turn-indicator').textContent =
+                this.turnIndicatorEl.textContent =
                     `💥 命中${hitZone}！造成 ${damage} 點傷害！`;
             }
             this.addEffect(target.x, target.y, 'explosion');
@@ -1671,7 +1684,7 @@ class Game {
         // 立即重置攻擊者的道具狀態（結束超級賽亞人型態）
         this.players[this.currentTurn].activeItem = null;
 
-        document.getElementById('turn-indicator').textContent = '💨 沒有命中...';
+        this.turnIndicatorEl.textContent = '💨 沒有命中...';
 
         // 播放嘲諷音效
         soundManager.playTauntSound();
@@ -1760,26 +1773,26 @@ class Game {
             case 'double':
                 // 加倍傷害（標記，等攻擊時套用）
                 playerData.activeItem = 'double';
-                document.getElementById('turn-indicator').textContent = '⚔️ 下次攻擊傷害加倍！';
+                this.turnIndicatorEl.textContent = '⚔️ 下次攻擊傷害加倍！';
                 break;
 
             case 'heal':
                 // 立即恢復血量
                 playerData.hp = Math.min(CONFIG.MAX_HP, playerData.hp + CONFIG.ITEMS.heal.amount);
-                document.getElementById('turn-indicator').textContent =
+                this.turnIndicatorEl.textContent =
                     `💚 恢復了 ${CONFIG.ITEMS.heal.amount} HP！`;
                 break;
 
             case 'shield':
                 // 啟用護盾（擋下一次攻擊）
                 playerData.hasShield = true;
-                document.getElementById('turn-indicator').textContent = '🛡️ 護盾已啟用！';
+                this.turnIndicatorEl.textContent = '🛡️ 護盾已啟用！';
                 break;
 
             case 'bigWeapon':
                 // 放大武器（標記，等攻擊時套用）
                 playerData.activeItem = 'bigWeapon';
-                document.getElementById('turn-indicator').textContent = '🔥 武器放大 200%！';
+                this.turnIndicatorEl.textContent = '🔥 武器放大 200%！';
                 break;
         }
 
@@ -1853,7 +1866,9 @@ class Game {
                 activeItem: null,
                 animation: null,
                 animationFrame: 0,
-                animationDuration: 0
+                animationDuration: 0,
+                hpFlash: 0,
+                lastHp: CONFIG.MAX_HP
             },
             2: {
                 team: null,
@@ -1865,7 +1880,9 @@ class Game {
                 activeItem: null,
                 animation: null,
                 animationFrame: 0,
-                animationDuration: 0
+                animationDuration: 0,
+                hpFlash: 0,
+                lastHp: CONFIG.MAX_HP
             }
         };
 
@@ -1892,9 +1909,22 @@ class Game {
 
     // ==================== 畫面渲染 ====================
     render() {
+        // 當問題視窗或遊戲結束覆蓋在上面時，跳過 canvas 渲染
+        if (this.state === GameState.QUESTION || this.state === GameState.GAME_OVER) return;
+
         const ctx = this.ctx;
         const w = this.canvas.width;
         const h = this.canvas.height;
+
+        if (!this.imagesLoaded) {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px Microsoft JhengHei';
+            ctx.textAlign = 'center';
+            ctx.fillText('載入中...', w / 2, h / 2);
+            return;
+        }
 
         // 清除畫面
         ctx.clearRect(0, 0, w, h);
@@ -1956,6 +1986,19 @@ class Game {
 
         // 繪製特效
         this.drawEffects();
+    }
+
+    // 繪製文字描邊輔助函數（從渲染迴圈提取為 class method）
+    drawTextWithStroke(text, x, y, fontSize, fillColor, strokeColor, strokeWidth) {
+        const ctx = this.ctx;
+        ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = strokeWidth;
+        ctx.strokeStyle = strokeColor;
+        ctx.strokeText(text, x, y);
+        ctx.fillStyle = fillColor;
+        ctx.fillText(text, x, y);
     }
 
     drawHealthBar(playerNum) {
@@ -2131,26 +2174,14 @@ class Game {
             ctx.restore();
         }
 
-        // 繪製文字描邊輔助函數
-        const drawTextWithStroke = (text, x, y, fontSize, fillColor, strokeColor, strokeWidth) => {
-            ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.lineWidth = strokeWidth;
-            ctx.strokeStyle = strokeColor;
-            ctx.strokeText(text, x, y);
-            ctx.fillStyle = fillColor;
-            ctx.fillText(text, x, y);
-        };
-
         // 玩家名稱標籤（大字體 + 描邊）
         const labelX = playerNum === 1 ? barX + 35 : barX + barWidth - 35;
         const labelY = barY - 12;
-        drawTextWithStroke(`P${playerNum}`, labelX, labelY, 22, colors.primary, '#000', 4);
+        this.drawTextWithStroke(`P${playerNum}`, labelX, labelY, 22, colors.primary, '#000', 4);
 
         // 血量數字（置中顯示，大字體 + 描邊）
         const hpText = `${player.hp}/${CONFIG.MAX_HP}`;
-        drawTextWithStroke(hpText, barX + barWidth / 2, barY + barHeight / 2, 18, '#FFFFFF', '#000', 4);
+        this.drawTextWithStroke(hpText, barX + barWidth / 2, barY + barHeight / 2, 18, '#FFFFFF', '#000', 4);
 
         // 快打旋風風格角色頭像
         if (player.team) {
@@ -2612,20 +2643,24 @@ class Game {
         ctx.restore();
     }
 
-    // 取得圍牆邊界
+    // 取得圍牆邊界（含快取）
     getWallBounds() {
+        if (this._wallBoundsCache) return this._wallBoundsCache;
+
         const w = this.canvas.width;
         const h = this.canvas.height;
         const groundY = h - 20;
         const wallWidth = CONFIG.WALL.WIDTH;
         const wallHeight = groundY * CONFIG.WALL.HEIGHT_RATIO;
 
-        return {
+        const result = {
             x: (w - wallWidth) / 2,
             y: groundY - wallHeight,
             width: wallWidth,
             height: wallHeight
         };
+        this._wallBoundsCache = result;
+        return result;
     }
 
     // 繪製中間圍牆（簡單 2D 美式風格）

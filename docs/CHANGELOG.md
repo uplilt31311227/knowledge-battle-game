@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [v1.7.0] - 2026-04-04
+
+### 變更
+- 移除未使用的 wall.png 圖片（節省 668KB）
+- 移除死碼：ASSETS.ground、CONFIG.WALL.COLOR/BORDER_COLOR
+- 圖片載入改為 Promise 追蹤，加入「載入中」畫面
+- 快取 DOM 元素引用與 getWallBounds() 結果
+- 問題視窗與遊戲結束時跳過 canvas 渲染
+- drawTextWithStroke 從渲染迴圈提取為 class method
+- 合併 CSS 重複的 .item-count 規則
+
+### 修復
+- 修�� restart() 缺少 hpFlash/lastHp 屬性導致血條動畫異常
+- 統一 groundY 為 canvas.height - 20（原 updatePlayerPositions 為 -30）
+
 ## [v1.6.0] - 2026-04-04
 
 ### 變更

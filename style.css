@@ -482,9 +482,6 @@ html, body {
 
 .item-count {
     pointer-events: none; /* 確保點擊事件傳遞到父按鈕 */
-}
-
-.item-count {
     position: absolute;
     bottom: 5px;
     right: 5px;
