@@ -1921,9 +1921,9 @@ class Game {
         // 清除畫面
         ctx.clearRect(0, 0, w, h);
 
-        // zoom out 時繪製畫面外的深色背景
+        // zoom out 時先用天空色填滿整個 canvas，避免殘留黑邊
         if (this.camera.zoom < 0.999) {
-            ctx.fillStyle = '#1a1a2e';
+            ctx.fillStyle = '#8a9399';
             ctx.fillRect(0, 0, w, h);
         }
 
@@ -1937,7 +1937,16 @@ class Game {
         // 繪製背景圖片
         const bgImg = this.images['background'];
         if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
-            // 繪製背景圖片，覆蓋整個畫布
+            // zoom out 時先拉伸背景填滿整個可見區域（消除邊界空白）
+            if (this.camera.zoom < 0.999) {
+                const z = this.camera.zoom;
+                const pad = 30; // 額外 padding 消除浮點誤差邊縫
+                const vMinX = -this.camera.offsetX / z - pad;
+                const vMaxX = (w - this.camera.offsetX) / z + pad;
+                const vMinY = -this.camera.offsetY / z - pad;
+                ctx.drawImage(bgImg, vMinX, vMinY, vMaxX - vMinX, h - vMinY + pad);
+            }
+            // 正常大小背景覆蓋中心（保持清晰度）
             ctx.drawImage(bgImg, 0, 0, w, h);
         } else {
             // 備用：繪製漸層背景
