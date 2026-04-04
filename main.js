@@ -2334,7 +2334,7 @@ class Game {
         }
 
         // 根據角色位置決定面向：左半邊面向右，右半邊面向左
-        const facingLeft = player.x > this.canvas.width / 2;
+        const facingLeft = player.x < this.canvas.width / 2;
         const flipScale = facingLeft ? -scale : scale;
 
         // 檢查圖片是否成功載入
