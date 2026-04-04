@@ -2381,11 +2381,15 @@ class Game {
             ctx.restore();
         }
 
+        // 根據角色位置決定面向：左半邊面向右，右半邊面向左
+        const facingLeft = player.x < this.canvas.width / 2;
+        const flipScale = facingLeft ? -scale : scale;
+
         // 檢查圖片是否成功載入
         if (img && img.complete && img.naturalWidth > 0) {
             ctx.translate(drawX, drawY);
             ctx.rotate(rotation);
-            ctx.scale(playerNum === 2 ? -scale : scale, scale);
+            ctx.scale(flipScale, scale);
             ctx.drawImage(img, -size / 2, -size / 2, size, size);
 
             // 受傷紅色覆蓋
@@ -2406,7 +2410,7 @@ class Game {
 
             ctx.translate(drawX, drawY);
             ctx.rotate(rotation);
-            ctx.scale(playerNum === 2 ? -scale : scale, scale);
+            ctx.scale(flipScale, scale);
             ctx.font = `${size * 0.8}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
