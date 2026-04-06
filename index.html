@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>知識大亂鬥 - 貓狗大戰</title>
-    <!-- SheetJS 用於讀取 Excel 檔案 (含備用 CDN) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- PapaParse 用於讀取 CSV 檔案 (含備用 CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script>
-        if (typeof XLSX === 'undefined') {
-            document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+        if (typeof Papa === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"><\/script>');
         }
     </script>
     <link rel="stylesheet" href="style.css">
@@ -28,8 +28,8 @@
                 <img src="assets/dog/idle.png" alt="狗狗" class="title-character right">
             </div>
             <div class="upload-section">
-                <p>請上傳 Excel 題庫檔案 (.xlsx)</p>
-                <p class="hint">格式：題目、選項A、選項B、選項C、選項D、正確解答</p>
+                <p>請上傳 CSV 題庫檔案 (.csv)</p>
+                <p class="hint">支援 Blooket 匯出格式</p>
 
                 <!-- 設定選項（水平排列） -->
                 <div class="settings-row">
@@ -85,7 +85,7 @@
                     <label for="excel-upload" class="upload-btn">
                         📁 選擇檔案
                     </label>
-                    <input type="file" id="excel-upload" accept=".xlsx,.xls" hidden>
+                    <input type="file" id="excel-upload" accept=".csv" hidden>
                     <span id="file-name" class="file-name"></span>
                 </div>
                 <p id="upload-error" class="error-msg"></p>

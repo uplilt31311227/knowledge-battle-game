@@ -1196,79 +1196,82 @@ class Game {
         fileNameEl.textContent = `⏳ 正在載入 ${file.name}...`;
 
         // 檢查檔案類型
-        if (!file.name.match(/\.(xlsx|xls)$/i)) {
-            errorEl.textContent = '❌ 請上傳 Excel 檔案 (.xlsx 或 .xls)';
+        if (!file.name.match(/\.csv$/i)) {
+            errorEl.textContent = '❌ 請上傳 CSV 檔案 (.csv)';
             fileNameEl.textContent = '';
             return;
         }
 
-        // 檢查 XLSX 庫是否載入
-        if (typeof XLSX === 'undefined') {
-            errorEl.textContent = '❌ Excel 處理庫未載入，請重新整理頁面';
+        // 檢查 PapaParse 庫是否載入
+        if (typeof Papa === 'undefined') {
+            errorEl.textContent = '❌ CSV 處理庫未載入，請重新整理頁面';
             fileNameEl.textContent = '';
-            console.error('XLSX library not loaded');
+            console.error('PapaParse library not loaded');
             return;
         }
 
-        const reader = new FileReader();
+        Papa.parse(file, {
+            header: false,
+            skipEmptyLines: true,
+            complete: (results) => {
+                try {
+                    console.log('CSV 解析完成，共', results.data.length, '列');
+                    const rows = results.data;
 
-        reader.onload = (event) => {
-            try {
-                console.log('檔案讀取完成，開始解析...');
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                    // Blooket CSV 格式：前兩列為標題，資料從第三列開始
+                    // 欄位：Question #, Question Text, Answer 1, Answer 2, Answer 3, Answer 4, Time Limit, Correct Answer(s)
+                    const answerNumToLetter = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' };
 
-                // 讀取第一個工作表
-                const sheetName = workbook.SheetNames[0];
-                console.log('工作表名稱:', sheetName);
-                const worksheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                console.log('解析到', json.length, '列資料');
+                    this.questions = [];
+                    for (let i = 2; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || !row[1]) continue;
 
-                // 解析題目（跳過標題列）
-                this.questions = [];
-                for (let i = 1; i < json.length; i++) {
-                    const row = json[i];
-                    if (row && row.length >= 6 && row[0]) {
+                        const questionText = (row[1] || '').trim();
+                        const answer1 = (row[2] || '').trim();
+                        const answer2 = (row[3] || '').trim();
+                        const answer3 = (row[4] || '').trim();
+                        const answer4 = (row[5] || '').trim();
+                        const correctNum = (row[7] || '').toString().trim();
+
+                        if (!questionText || !correctNum) continue;
+
                         this.questions.push({
-                            question: row[0],
+                            question: questionText,
                             options: {
-                                A: row[1] || '',
-                                B: row[2] || '',
-                                C: row[3] || '',
-                                D: row[4] || ''
+                                A: answer1,
+                                B: answer2,
+                                C: answer3,
+                                D: answer4
                             },
-                            answer: (row[5] || '').toString().toUpperCase().trim()
+                            answer: answerNumToLetter[correctNum] || correctNum.toUpperCase()
                         });
                     }
-                }
 
-                console.log('解析到', this.questions.length, '題');
+                    console.log('解析到', this.questions.length, '題');
 
-                if (this.questions.length === 0) {
-                    errorEl.textContent = '❌ 找不到有效題目，請確認格式：題目、選項A、選項B、選項C、選項D、正確解答';
+                    if (this.questions.length === 0) {
+                        errorEl.textContent = '❌ 找不到有效題目，請確認 CSV 為 Blooket 匯出格式';
+                        fileNameEl.textContent = '';
+                        return;
+                    }
+
+                    // 顯示檔案資訊
+                    fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題)`;
+                    startBtn.disabled = false;
+
+                } catch (err) {
+                    console.error('CSV 解析錯誤:', err);
+                    errorEl.textContent = '❌ 檔案解析失敗：' + err.message;
                     fileNameEl.textContent = '';
-                    return;
                 }
-
-                // 顯示檔案資訊
-                fileNameEl.textContent = `✅ ${file.name} (${this.questions.length} 題)`;
-                startBtn.disabled = false;
-
-            } catch (err) {
-                console.error('Excel 解析錯誤:', err);
-                errorEl.textContent = '❌ 檔案解析失敗：' + err.message;
+            },
+            error: (err) => {
+                console.error('CSV 讀取錯誤:', err);
+                errorEl.textContent = '❌ 檔案讀取失敗：' + err.message;
                 fileNameEl.textContent = '';
             }
-        };
-
-        reader.onerror = (err) => {
-            console.error('檔案讀取錯誤:', err);
-            errorEl.textContent = '❌ 檔案讀取失敗';
-            fileNameEl.textContent = '';
-        };
-
-        reader.readAsArrayBuffer(file);
+        });
     }
 
     shuffleQuestions() {
