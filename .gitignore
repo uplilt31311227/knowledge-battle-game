@@ -17,11 +17,21 @@ main.py
 
 # 題庫檔案（用戶自行上傳）
 *.csv
+*.xlsx
+
+# 非必要文字檔
+*.txt
+
+# Node.js
+node_modules/
 
 # 系統檔案
 .DS_Store
 Thumbs.db
 nul
+
+# Claude Code
+.claude/
 
 # IDE
 .vscode/
