@@ -1,6 +1,6 @@
 ---
 created: 2026-04-10
-updated: 2026-04-10
+updated: 2026-04-17
 tags:
   - deployment
 ---
@@ -9,10 +9,16 @@ tags:
 
 ## 部署環境總覽
 
-| 環境 | 說明 | 狀態 |
-|------|------|------|
-| 課堂使用 | 直接開啟 index.html | 🟢 可用 |
-| GitHub Pages | 靜態網頁部署 | 🟢 可用 |
+| 環境 | 說明 | 網址 | 狀態 |
+|------|------|------|------|
+| 課堂使用 | 直接開啟 index.html | - | 🟢 可用 |
+| GitHub Pages | 靜態網頁部署 | https://uplilt31311227.github.io/knowledge-battle-game/ | 🟢 可用 |
+
+## 前端網址
+
+**正式網址**：https://uplilt31311227.github.io/knowledge-battle-game/
+
+**GitHub Repo**：https://github.com/uplilt31311227/knowledge-battle-game
 
 ## 部署方式
 

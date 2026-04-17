@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [2026-04-17]
+
+### 變更
+- 更新 `docs/DEPLOYMENT.md`：補上 GitHub Pages 前端網址與 Repo 連結
+
 ## [v1.7.0] - 2026-04-04
 
 ### 變更
